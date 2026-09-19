@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "whipandpour-dev",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["whipandpour_project/run-local.sh", "dev"],
+      "port": 5173
+    }
+  ]
+}

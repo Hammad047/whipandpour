@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="Iced Latte candle placeholder">
+  <rect width="600" height="600" fill="#F3EBE1"/>
+  <circle cx="300" cy="330" r="205" fill="#DCC6AE" opacity="0.28"/>
+  <rect x="18" y="18" width="564" height="564" rx="28" fill="none" stroke="#E8DDD0" stroke-width="3"/>
+
+  <rect x="228" y="215" width="144" height="270" rx="20" fill="#FAF7F2" stroke="#8B6A4A" stroke-width="5"/>
+  <rect x="240" y="300" width="120" height="172" rx="14" fill="#DCC6AE"/>
+  <rect x="240" y="258" width="120" height="46" rx="10" fill="#FAF7F2"/>
+  <rect x="246" y="316" width="108" height="26" rx="10" fill="#FAF7F2" opacity="0.6"/>
+  <rect x="246" y="368" width="108" height="22" rx="9" fill="#FAF7F2" opacity="0.45"/>
+  <rect x="322" y="150" width="12" height="90" rx="6" fill="#8B6A4A" transform="rotate(12 328 195)"/>
+  <ellipse cx="300" cy="215" rx="72" ry="17" fill="#8B6A4A" opacity="0.35"/>
+  <text x="300" y="545" text-anchor="middle" font-family="Georgia, 'Playfair Display', serif"
+        font-size="30" fill="#2C2C2C" opacity="0.72">Iced Latte</text>
+  <text x="300" y="574" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+        font-size="15" letter-spacing="3" fill="#C9A84C">WHIP &amp; POUR</text>
+</svg>

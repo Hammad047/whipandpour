@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="Dessert Jar candle placeholder">
+  <rect width="600" height="600" fill="#F3EBE1"/>
+  <circle cx="300" cy="330" r="205" fill="#E8C9A0" opacity="0.28"/>
+  <rect x="18" y="18" width="564" height="564" rx="28" fill="none" stroke="#E8DDD0" stroke-width="3"/>
+
+  <rect x="215" y="250" width="170" height="230" rx="26" fill="#E8C9A0" stroke="#C98F5C" stroke-width="6"/>
+  <rect x="205" y="228" width="190" height="40" rx="14" fill="#C98F5C"/>
+  <path d="M225 330 q75 -40 150 0 v120 q0 20 -20 20 h-110 q-20 0 -20 -20 z" fill="#C98F5C" opacity="0.35"/>
+  <rect x="296" y="180" width="8" height="52" rx="4" fill="#2C2C2C"/>
+  <ellipse cx="300" cy="168" rx="15" ry="26" fill="#C9A84C"/>
+  <ellipse cx="300" cy="176" rx="7" ry="13" fill="#FAF7F2" opacity="0.85"/>
+  <text x="300" y="545" text-anchor="middle" font-family="Georgia, 'Playfair Display', serif"
+        font-size="30" fill="#2C2C2C" opacity="0.72">Dessert Jar</text>
+  <text x="300" y="574" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+        font-size="15" letter-spacing="3" fill="#C9A84C">WHIP &amp; POUR</text>
+</svg>

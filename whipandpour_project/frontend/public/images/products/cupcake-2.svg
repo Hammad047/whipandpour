@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="Cupcake candle placeholder">
+  <rect width="600" height="600" fill="#F3EBE1"/>
+  <circle cx="300" cy="330" r="205" fill="#F2D3DA" opacity="0.28"/>
+  <rect x="18" y="18" width="564" height="564" rx="28" fill="none" stroke="#E8DDD0" stroke-width="3"/>
+
+  <path d="M228 330 h144 l-22 150 q-3 20 -23 20 h-54 q-20 0 -23 -20 z" fill="#D4788F" opacity="0.55"/>
+  <path d="M228 330 h144 l-6 40 h-132 z" fill="#D4788F"/>
+  <path d="M300 210 q62 34 62 82 q0 40 -62 40 q-62 0 -62 -40 q0 -48 62 -82 z" fill="#F2D3DA"/>
+  <circle cx="272" cy="300" r="9" fill="#D4788F" opacity="0.7"/>
+  <circle cx="322" cy="288" r="7" fill="#D4788F" opacity="0.7"/>
+  <circle cx="300" cy="196" r="13" fill="#D4A5A5"/>
+  <text x="300" y="545" text-anchor="middle" font-family="Georgia, 'Playfair Display', serif"
+        font-size="30" fill="#2C2C2C" opacity="0.72">Cupcake</text>
+  <text x="300" y="574" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+        font-size="15" letter-spacing="3" fill="#C9A84C">WHIP &amp; POUR</text>
+</svg>

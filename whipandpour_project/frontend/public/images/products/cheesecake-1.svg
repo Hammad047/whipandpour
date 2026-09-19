@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="Cheesecake candle placeholder">
+  <rect width="600" height="600" fill="#FAF7F2"/>
+  <circle cx="300" cy="330" r="205" fill="#F5E3B8" opacity="0.28"/>
+  <rect x="18" y="18" width="564" height="564" rx="28" fill="none" stroke="#E8DDD0" stroke-width="3"/>
+
+  <path d="M195 400 h210 v58 q0 22 -22 22 h-166 q-22 0 -22 -22 z" fill="#D8A94B" opacity="0.55"/>
+  <path d="M195 300 h210 v100 h-210 z" fill="#F5E3B8"/>
+  <path d="M195 300 q52 -34 105 -34 q53 0 105 34 z" fill="#D4A5A5"/>
+  <circle cx="255" cy="284" r="12" fill="#D4A5A5"/>
+  <circle cx="300" cy="274" r="14" fill="#D4A5A5"/>
+  <circle cx="346" cy="286" r="11" fill="#D4A5A5"/>
+  <rect x="195" y="396" width="210" height="12" fill="#D8A94B" opacity="0.75"/>
+  <text x="300" y="545" text-anchor="middle" font-family="Georgia, 'Playfair Display', serif"
+        font-size="30" fill="#2C2C2C" opacity="0.72">Cheesecake</text>
+  <text x="300" y="574" text-anchor="middle" font-family="Helvetica, Arial, sans-serif"
+        font-size="15" letter-spacing="3" fill="#C9A84C">WHIP &amp; POUR</text>
+</svg>

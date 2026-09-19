@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build output / caches
+dist/
+.vite/
+
+# Environment / secrets
+.env
+.env.local
+*.env
+!.env.example
+
+# Database (runtime data, not source)
+*.db
+*.db.bak*
+*.db.pre-migration*
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
