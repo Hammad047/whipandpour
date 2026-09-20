@@ -98,13 +98,27 @@ def require_admin(request: Request, db: Session) -> User:
     return user
 
 
+def _cross_site_cookie() -> bool:
+    """
+    True when the frontend and backend are on different origins (e.g. the
+    static frontend on whipandpour.com, this API on Render) — set via the
+    CROSS_SITE_COOKIES env var. Browsers refuse to send a SameSite=Lax cookie
+    on a cross-site fetch/XHR at all, so a split deployment needs
+    SameSite=None, which in turn requires Secure (HTTPS).
+    """
+    import os
+
+    return os.getenv("CROSS_SITE_COOKIES", "false").lower() == "true"
+
+
 def set_session_cookie(response: Response, session_id: str) -> None:
+    cross_site = _cross_site_cookie()
     response.set_cookie(
         key=COOKIE_NAME,
         value=session_id,
         httponly=True,
-        samesite="lax",
-        secure=False,   # Set True in production with HTTPS
+        samesite="none" if cross_site else "lax",
+        secure=cross_site,  # SameSite=None is rejected by browsers without Secure.
         max_age=60 * 60 * 24 * 30,  # 30 days
     )
 

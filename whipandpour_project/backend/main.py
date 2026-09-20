@@ -112,9 +112,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Explicit origins, not "*" — this API sends a session cookie
+# (allow_credentials=True), and a wildcard origin combined with credentials
+# lets any website ride a visitor's session. ALLOWED_ORIGINS overrides the
+# default for a split deployment (e.g. a frontend on a different domain).
+_default_origins = "https://whipandpour.com,https://www.whipandpour.com,http://localhost:5173"
+_allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", _default_origins).split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

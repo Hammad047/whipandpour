@@ -54,10 +54,18 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// Relative by default (frontend and backend on the same origin, as in local
+// dev via the Vite proxy). Set VITE_API_URL at build time to point at a
+// backend hosted on a different domain (e.g. a split deployment where the
+// frontend is static-hosted and the backend runs elsewhere).
+const API_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api/trpc`
+  : "/api/trpc";
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: API_URL,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
