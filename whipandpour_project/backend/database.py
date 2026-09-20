@@ -1,9 +1,14 @@
 """
 database.py — SQLAlchemy engine, session, all table models, and seed data.
-Uses SQLite so no external database server is needed.
+
+Uses SQLite by default (a single file, no server needed) for local dev.
+Set DATABASE_URL (or the DB_HOST/DB_NAME/DB_USER/DB_PASSWORD pieces) to point
+at a real MySQL database instead — e.g. Hostinger's hosted MySQL — for
+deployment. Everything below (models, seeding, the ad-hoc migrations) works
+against either; only this connection setup differs.
 """
 
-import json
+import os
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import (
@@ -12,11 +17,48 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-DATABASE_URL = "sqlite:///./whipandpour.db"
+import json
+
+
+def _build_database_url() -> str:
+    # A full DATABASE_URL wins outright if set.
+    explicit = os.getenv("DATABASE_URL")
+    if explicit:
+        return explicit
+
+    # Otherwise, a MySQL database assembled from its parts (e.g. Hostinger's
+    # hPanel gives you these separately, not as one URL).
+    db_host = os.getenv("DB_HOST")
+    db_name = os.getenv("DB_NAME")
+    db_user = os.getenv("DB_USER")
+    if db_host and db_name and db_user:
+        db_port = os.getenv("DB_PORT", "3306")
+        db_password = os.getenv("DB_PASSWORD", "")
+        from urllib.parse import quote_plus
+
+        return (
+            f"mysql+pymysql://{quote_plus(db_user)}:{quote_plus(db_password)}"
+            f"@{db_host}:{db_port}/{db_name}?charset=utf8mb4"
+        )
+
+    # Local dev default: a single file next to this module, regardless of the
+    # process's working directory.
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "whipandpour.db")
+    return f"sqlite:///{db_path}"
+
+
+DATABASE_URL = _build_database_url()
+_IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    # Only SQLite needs this — it forbids using a connection across threads
+    # by default, which FastAPI's per-request sessions otherwise trip over.
+    connect_args={"check_same_thread": False} if _IS_SQLITE else {},
+    # MySQL connections idle out silently; without this, the first query
+    # after a lull fails with "MySQL server has gone away" instead of
+    # SQLAlchemy transparently reconnecting.
+    pool_pre_ping=not _IS_SQLITE,
     echo=False,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -480,17 +522,29 @@ def _seed_admin(db: Session) -> None:
         print(f"[DB] Set password for existing admin account: {email}")
 
 
+def _table_columns(table_name: str) -> set[str]:
+    """
+    Column names currently on a table, via SQLAlchemy's inspector rather than
+    a raw dialect-specific query — `PRAGMA table_info(...)` only exists on
+    SQLite and errors outright on MySQL.
+    """
+    from sqlalchemy import inspect
+
+    return {col["name"] for col in inspect(engine).get_columns(table_name)}
+
+
 def _migrate_schema(db: Session) -> None:
     """
-    Add columns introduced after a database file already existed.
+    Add columns introduced after a database (SQLite file or MySQL schema)
+    already existed.
 
     `Base.metadata.create_all()` only creates missing tables, never missing
     columns on a table that's already there, so a column added to a model
-    needs an explicit `ALTER TABLE` for anyone with an existing whipandpour.db.
+    needs an explicit `ALTER TABLE` for anyone with an existing database.
     """
     from sqlalchemy import text
 
-    existing_columns = {row[1] for row in db.execute(text("PRAGMA table_info(promoCodes)"))}
+    existing_columns = _table_columns("promoCodes")
     if "firstOrderOnly" not in existing_columns:
         db.execute(text("ALTER TABLE promoCodes ADD COLUMN firstOrderOnly BOOLEAN NOT NULL DEFAULT 0"))
         db.commit()
@@ -503,7 +557,7 @@ def _migrate_schema(db: Session) -> None:
             db.commit()
             print("[DB] Marked WELCOME10 as first-order-only.")
 
-    order_columns = {row[1] for row in db.execute(text("PRAGMA table_info(orders)"))}
+    order_columns = _table_columns("orders")
     order_migrations = {
         "advanceRequired": "BOOLEAN NOT NULL DEFAULT 0",
         "advanceAmount": "NUMERIC(10, 2) NOT NULL DEFAULT 0",

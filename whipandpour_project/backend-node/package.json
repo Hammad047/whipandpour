@@ -1,0 +1,23 @@
+{
+  "name": "whipandpour-backend-node",
+  "version": "1.0.0",
+  "description": "Whip & Pour backend — Node/Express, tRPC-compatible batch endpoint. Node port of the Python FastAPI backend, same wire protocol, same behavior.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "cookie": "^0.7.2",
+    "sequelize": "^6.37.5",
+    "mysql2": "^3.11.5",
+    "sqlite3": "^5.1.7",
+    "decimal.js": "^10.4.3",
+    "nodemailer": "^6.9.16",
+    "stripe": "^17.5.0",
+    "dotenv": "^16.4.7"
+  }
+}
