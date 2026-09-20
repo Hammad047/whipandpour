@@ -4,7 +4,6 @@ Uses SQLite so no external database server is needed.
 """
 
 import json
-import os
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import (
@@ -13,12 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
-# Anchored to this file's directory rather than the process's current working
-# directory — some WSGI hosts (e.g. PythonAnywhere) don't run with cwd set to
-# this folder the way `run-local.sh` always does, which would otherwise
-# create (or look for) the database file somewhere unexpected.
-_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "whipandpour.db")
-DATABASE_URL = f"sqlite:///{_DB_PATH}"
+DATABASE_URL = "sqlite:///./whipandpour.db"
 
 engine = create_engine(
     DATABASE_URL,

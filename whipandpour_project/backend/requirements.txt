@@ -4,7 +4,3 @@ sqlalchemy==2.0.36
 python-dotenv==1.0.1
 stripe==11.2.0
 python-multipart==0.0.12
-# ASGI-to-WSGI bridge — only needed when hosting on a platform whose web app
-# server speaks WSGI, not ASGI (e.g. PythonAnywhere's standard web apps). See
-# wsgi.py. Harmless to install everywhere else; nothing else imports it.
-a2wsgi==1.10.7
