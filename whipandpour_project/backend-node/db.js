@@ -450,7 +450,7 @@ async function initDb() {
   // database was created. There's no legacy data to migrate here — this is a
   // fresh schema — so a plain alter-sync covers it, unlike the hand-rolled
   // migration the Python version needed for its already-live SQLite files.
-  await sequelize.sync({ alter: true });
+  await sequelize.sync();
 
   if ((await Product.count()) === 0) {
     for (const p of SEED_PRODUCTS) {
