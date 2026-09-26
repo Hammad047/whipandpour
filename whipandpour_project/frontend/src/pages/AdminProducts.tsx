@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Plus, Edit2, Trash2, Search, X, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Loader2, Upload } from 'lucide-react';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdmin } from '@/contexts/AdminContext';
 import { trpc } from '@/lib/trpc';
 import { CATEGORIES, categoryLabel, formatPrice, toNumber } from '@/const';
 import { toast } from 'sonner';
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 /**
  * Admin → Products
@@ -44,6 +46,7 @@ export default function AdminProducts() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [uploadingImage, setUploadingImage] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
   const { data: products = [], isLoading, isError, error } = trpc.admin.products.list.useQuery(
@@ -143,6 +146,60 @@ export default function AdminProducts() {
       images: [...(product.images ?? []), '', '', '', '', ''].slice(0, 5),
     });
     setShowForm(true);
+  };
+
+
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be smaller than 5MB');
+      event.target.value = '';
+      return;
+    }
+
+    setUploadingImage(index);
+
+    try {
+      const body = new FormData();
+      body.append('image', file);
+
+      const response = await fetch(`${API_URL}/api/admin/upload/image`, {
+        method: 'POST',
+        credentials: 'include',
+        body,
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result?.success || !result?.url) {
+        throw new Error(result?.message || 'Image upload failed');
+      }
+
+      setFormData((current) => {
+        const images = [...current.images];
+        images[index] = result.url;
+        return { ...current, images };
+      });
+
+      toast.success('Image uploaded');
+    } catch (error: any) {
+      toast.error(error?.message || 'Image upload failed');
+    } finally {
+      setUploadingImage(null);
+      event.target.value = '';
+    }
   };
 
   const handleSave = () => {

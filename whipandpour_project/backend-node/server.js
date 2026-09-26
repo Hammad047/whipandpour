@@ -30,6 +30,7 @@ const {
 } = require("./auth");
 
 const { productsList, productsCategories, productsFeatured, productsBestsellers, productsBySlug, productsById } = require("./routers/products");
+const uploadRouter = require("./routers/uploads");
 const { cartGet, cartAdd, cartUpdate, cartClear } = require("./routers/cart");
 const { wishlistList, wishlistAdd, wishlistRemove } = require("./routers/wishlist");
 const {
@@ -617,7 +618,8 @@ async function start() {
   await initDb();
   console.log("[Startup] Database ready.");
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.use("/api/admin/upload", uploadRouter);
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Startup] Listening on port ${PORT}`);
   });
 }

@@ -9,15 +9,17 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "express": "^4.21.2",
-    "cors": "^2.8.5",
+    "cloudinary": "^2.11.0",
     "cookie": "^0.7.2",
-    "sequelize": "^6.37.5",
-    "mysql2": "^3.11.5",
-    "sqlite3": "^5.1.7",
+    "cors": "^2.8.5",
     "decimal.js": "^10.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^2.4.0",
+    "mysql2": "^3.11.5",
     "nodemailer": "^6.9.16",
-    "stripe": "^17.5.0",
-    "dotenv": "^16.4.7"
+    "sequelize": "^6.37.5",
+    "sqlite3": "^5.1.7",
+    "stripe": "^17.5.0"
   }
 }
