@@ -54,10 +54,6 @@ const { mailStatus } = require("./mailer");
 
 const app = express();
 app.use(express.json());
-// Serve uploaded product images.
-const uploadsPath = path.join(__dirname, "uploads");
-app.use("/uploads", express.static(uploadsPath));
-
 
 // Explicit origins, not "*" — this API sends a session cookie (credentials:
 // true), and a wildcard origin combined with credentials lets any website
