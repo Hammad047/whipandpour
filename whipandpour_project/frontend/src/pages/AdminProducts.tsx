@@ -425,21 +425,62 @@ export default function AdminProducts() {
                     ))}
                   </div>
                 </div>
-                {/* 5 Image URLs */}
+                {/* 5 Product Images */}
                 <div className="col-span-2">
-                  <label className="block text-sm font-semibold text-[#2C2C2C] mb-2">Product Images (up to 5 URLs)</label>
+                  <label className="block text-sm font-semibold text-[#2C2C2C] mb-1">
+                    Product Images (up to 5)
+                  </label>
+                  <p className="text-xs text-[#7A7066] mb-3">
+                    Upload images directly, or paste an image URL.
+                  </p>
+
                   <div className="space-y-2">
                     {formData.images.map((img, idx) => (
                       <div key={idx} className="flex gap-2 items-center">
-                        <span className="text-xs text-[#7A7066] w-14 flex-shrink-0">Image {idx + 1}{idx === 0 ? ' *' : ''}</span>
-                        <input type="url" placeholder={`https://... (image URL)`} value={img}
+                        <span className="text-xs text-[#7A7066] w-14 flex-shrink-0">
+                          Image {idx + 1}{idx === 0 ? ' *' : ''}
+                        </span>
+
+                        <input
+                          type="url"
+                          placeholder="https://... (image URL)"
+                          value={img}
                           onChange={(e) => {
                             const imgs = [...formData.images];
                             imgs[idx] = e.target.value;
                             setFormData({ ...formData, images: imgs });
                           }}
-                          className="flex-1 px-3 py-2 border border-[#E8DDD0] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#C9A84C]" />
-                        {img && <img src={img} alt="" className="w-10 h-10 rounded-lg object-cover border border-[#E8DDD0]" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                          className="flex-1 px-3 py-2 border border-[#E8DDD0] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                        />
+
+                        <label
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap ${
+                            uploadingImage === idx
+                              ? 'bg-gray-100 text-gray-400 cursor-wait'
+                              : 'bg-[#2C2C2C] text-white hover:bg-[#444] cursor-pointer'
+                          }`}
+                        >
+                          <Upload size={14} />
+                          {uploadingImage === idx ? 'Uploading...' : 'Upload'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingImage === idx}
+                            onChange={(e) => handleImageUpload(e, idx)}
+                          />
+                        </label>
+
+                        {img && (
+                          <img
+                            src={img}
+                            alt=""
+                            className="w-10 h-10 rounded-lg object-cover border border-[#E8DDD0]"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
