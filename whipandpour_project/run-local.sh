@@ -12,9 +12,12 @@ MODE="${1:-dev}"
 if [ "$MODE" = "prod" ]; then
   (cd frontend && npm run build)
   echo "→ http://localhost:8000"
-  (cd backend-node && exec node server.js)
+  (cd backend-node && exec env PORT=8000 node server.js)
 else
-  (cd backend-node && exec node --watch server.js) &
+  # Explicit PORT=8000 — the backend must not inherit an ambient PORT meant
+  # for the frontend dev server (e.g. from a launch config), or it binds the
+  # wrong port and the two servers collide.
+  (cd backend-node && exec env PORT=8000 node --watch server.js) &
   BACKEND_PID=$!
   trap 'kill $BACKEND_PID 2>/dev/null || true' EXIT
   echo "→ http://localhost:5173 (API proxied to :8000)"

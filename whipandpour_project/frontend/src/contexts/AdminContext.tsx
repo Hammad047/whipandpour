@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL;
+// Empty string, not undefined — `${API_URL}/api/...` must resolve to a
+// same-origin relative path when unset, not the literal string "undefined".
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 interface AdminUser {
   id: number;

@@ -19,6 +19,7 @@ export default function Cart() {
   const [promoCode, setPromoCode] = useState(appliedCode ?? '');
   const [discount, setDiscount] = useState(0);
 
+
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT_RATE;
   const total = Math.max(0, subtotal - discount) + shipping;
@@ -41,14 +42,17 @@ export default function Cart() {
   const handleApplyPromo = async () => {
     const code = promoCode.trim().toUpperCase();
     if (!code) return;
+
     try {
       const promo: any = await utils.promos.validate.fetch({ code });
+
       if (!promo || promo.isActive === false) {
         setDiscount(0);
         clearPromoCode();
         toast.error('That promo code is not valid');
         return;
       }
+
       const minOrder = toNumber(promo.minOrderAmount);
       if (subtotal < minOrder) {
         setDiscount(0);
@@ -56,15 +60,15 @@ export default function Cart() {
         toast.error(`This code needs a minimum order of ${formatPrice(minOrder)}`);
         return;
       }
+
       const value = toNumber(promo.value);
       const amount =
         promo.discountType === 'percent'
           ? Math.min(subtotal * (value / 100), subtotal)
           : Math.min(value, subtotal);
+
       setDiscount(amount);
       applyPromoCode(code);
-      // The final word on eligibility (e.g. first-order-only codes) is the
-      // server, at checkout — this is a preview.
       toast.success(`${code} applied — ${formatPrice(amount)} off, confirmed at checkout`);
     } catch (error: any) {
       setDiscount(0);
@@ -72,7 +76,6 @@ export default function Cart() {
       toast.error(error?.message ?? 'That promo code is not valid');
     }
   };
-
   const handleRemovePromo = () => {
     setPromoCode('');
     setDiscount(0);
@@ -212,6 +215,7 @@ export default function Cart() {
                       className="flex-1 px-3 py-2 border border-[#E8DDD0] rounded-lg text-[#2C2C2C] placeholder-[#7A7066] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                     />
                     <button
+                      type="button"
                       onClick={handleApplyPromo}
                       className="px-4 py-2 bg-[#C9A84C] text-[#2C2C2C] rounded-lg font-medium hover:bg-[#D4A5A5] transition-colors"
                     >

@@ -7,7 +7,9 @@ import { trpc } from '@/lib/trpc';
 import { CATEGORIES, categoryLabel, formatPrice, toNumber } from '@/const';
 import { toast } from 'sonner';
 
-const API_URL = import.meta.env.VITE_API_URL;
+// Empty string, not undefined — `${API_URL}/api/...` must resolve to a
+// same-origin relative path when unset, not the literal string "undefined".
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 /**
  * Admin → Products
