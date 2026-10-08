@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Mail, Phone, MapPin, Clock, Instagram, Facebook, Send, CheckCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Clock, Instagram, Send, CheckCircle } from 'lucide-react';
 
 export default function Contact() {
   const [, navigate] = useLocation();
@@ -19,28 +19,28 @@ export default function Contact() {
       icon: Phone,
       color: '#C9A84C',
       title: 'Phone / WhatsApp',
-      lines: ['+92 300 123 4567', '+92 321 987 6543'],
-      sub: 'Available Mon–Sat, 10am–7pm',
+      lines: ['0319 5769094'],
+      sub: 'Available Sat–Thu, 9am–6pm',
     },
     {
       icon: Mail,
       color: '#D4A5A5',
       title: 'Email Us',
-      lines: ['hello@whipandpour.com', 'orders@whipandpour.com'],
+      lines: ['owner@whipandpour.com'],
       sub: 'We reply within 24 hours',
     },
     {
       icon: MapPin,
       color: '#C9A84C',
-      title: 'Visit Our Studio',
-      lines: ['DHA Phase 5, Lahore', 'Punjab, Pakistan'],
-      sub: 'By appointment only',
+      title: 'Based In',
+      lines: ['Islamabad, Pakistan'],
+      sub: 'Nationwide delivery',
     },
     {
       icon: Clock,
       color: '#D4A5A5',
       title: 'Business Hours',
-      lines: ['Mon – Sat: 10am – 7pm', 'Sunday: 12pm – 5pm'],
+      lines: ['Sat – Thu: 9am – 6pm', 'Friday: Closed'],
       sub: 'Public holidays may vary',
     },
   ];
@@ -48,7 +48,7 @@ export default function Contact() {
   const faqs = [
     {
       q: 'How long does delivery take?',
-      a: 'Standard delivery across Pakistan takes 3–5 business days. Express delivery (1–2 days) is available for Lahore, Karachi, and Islamabad.',
+      a: 'Standard delivery across Pakistan takes 3–5 business days. Express delivery (1–2 days) is available within Islamabad.',
     },
     {
       q: 'Do you offer custom/gift candles?',
@@ -225,7 +225,7 @@ export default function Contact() {
                 <h3 className="text-xl font-bold text-[#2C2C2C] mb-5">Follow Us</h3>
                 <div className="flex flex-col gap-3">
                   <a
-                    href="https://instagram.com"
+                    href="https://www.instagram.com/whipandpour_/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-100 hover:shadow-md transition-shadow group"
@@ -234,26 +234,12 @@ export default function Contact() {
                       <Instagram size={18} className="text-white" />
                     </div>
                     <div>
-                      <p className="font-bold text-[#2C2C2C] text-sm">@whipandpour</p>
+                      <p className="font-bold text-[#2C2C2C] text-sm">@whipandpour_</p>
                       <p className="text-xs text-[#7A7066]">Behind-the-scenes & new drops</p>
                     </div>
                   </a>
                   <a
-                    href="https://facebook.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100 hover:shadow-md transition-shadow group"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-                      <Facebook size={18} className="text-white" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-[#2C2C2C] text-sm">Whip & Pour Candles</p>
-                      <p className="text-xs text-[#7A7066]">Community & giveaways</p>
-                    </div>
-                  </a>
-                  <a
-                    href="https://wa.me/923001234567"
+                    href="https://wa.me/923195769094"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-4 p-4 rounded-xl bg-green-50 border border-green-100 hover:shadow-md transition-shadow group"

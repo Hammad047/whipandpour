@@ -117,21 +117,21 @@ export default function Footer() {
               <MapPin size={20} className="text-[#C9A84C]" />
               <div>
                 <p className="text-[#D4A5A5] text-sm">Address</p>
-                <p className="text-[#FAF7F2]">123 Candle Lane, Artisan City, AC 12345</p>
+                <p className="text-[#FAF7F2]">Islamabad, Pakistan</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Phone size={20} className="text-[#C9A84C]" />
               <div>
                 <p className="text-[#D4A5A5] text-sm">Phone</p>
-                <p className="text-[#FAF7F2]">+1 (555) 123-4567</p>
+                <p className="text-[#FAF7F2]">0319 5769094</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Mail size={20} className="text-[#C9A84C]" />
               <div>
                 <p className="text-[#D4A5A5] text-sm">Email</p>
-                <p className="text-[#FAF7F2]">hello@whipandpour.com</p>
+                <p className="text-[#FAF7F2]">owner@whipandpour.com</p>
               </div>
             </div>
           </div>
