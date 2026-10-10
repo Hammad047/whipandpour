@@ -483,6 +483,20 @@ export default function AdminProducts() {
                             }}
                           />
                         )}
+
+                        {img && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const imgs = [...formData.images];
+                              imgs[idx] = '';
+                              setFormData({ ...formData, images: imgs });
+                            }}
+                            className="text-xs font-semibold text-[#D4A5A5] hover:text-red-600 transition-colors whitespace-nowrap"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>

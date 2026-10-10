@@ -58,9 +58,11 @@ router.post("/image", upload.single("image"), async (req, res) => {
       });
     }
 
-    const baseUrl =
-      process.env.PUBLIC_API_URL ||
-      `${req.protocol}://${req.get("host")}`;
+    // Not req.get("host") — the Vite dev proxy forwards requests with the
+    // frontend's own Host header (localhost:5173) unchanged, so that would
+    // build a URL pointing at the frontend's port, which has no /uploads
+    // route at all. PUBLIC_API_URL must be set explicitly in production.
+    const baseUrl = process.env.PUBLIC_API_URL || `http://localhost:${process.env.PORT || 8000}`;
 
     const url = `${baseUrl}/uploads/products/${encodeURIComponent(
       req.file.filename

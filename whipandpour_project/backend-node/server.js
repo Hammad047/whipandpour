@@ -48,6 +48,7 @@ const {
   adminAnalytics, adminPaymentsList,
 } = require("./routers/admin");
 const { promosValidate } = require("./routers/promos");
+const { contentHomepage, adminContentUpdateHomepage } = require("./routers/content");
 const { reviewsByProduct, reviewsCanReview, reviewsCreate } = require("./routers/reviews");
 const { stripeCreateCheckoutSession, stripeGetSession } = require("./routers/stripeRouter");
 const { mailStatus } = require("./mailer");
@@ -362,7 +363,18 @@ async function dispatchProcedure(procedure, inputData, isMutation, req, res) {
     if (procedure === "admin.analytics") return adminAnalytics();
     if (procedure === "admin.payments.list") return adminPaymentsList();
 
+    // ── site content ──
+    if (procedure === "admin.content.updateHomepage") {
+      if (!isMutation) throw new TRPCError("updateHomepage must be a mutation", "METHOD_NOT_SUPPORTED");
+      return adminContentUpdateHomepage(inp);
+    }
+
     throw new TRPCError(`Procedure not found: ${procedure}`, "NOT_FOUND");
+  }
+
+  // ── site content ──
+  if (procedure === "content.homepage") {
+    return contentHomepage();
   }
 
   // ── promos ──

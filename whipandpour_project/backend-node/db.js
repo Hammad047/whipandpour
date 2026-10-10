@@ -203,6 +203,16 @@ const Review = sequelize.define("Review", {
   updatedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
 }, { tableName: "reviews" });
 
+// Simple key-value store for admin-editable site content (homepage hero
+// text/image today). One row per section rather than one row per field, so
+// adding a new editable field never needs a migration — just a new key in
+// the JSON `value`.
+const SiteSetting = sequelize.define("SiteSetting", {
+  key: { type: DataTypes.STRING(100), primaryKey: true },
+  value: { type: DataTypes.TEXT, allowNull: false },
+  updatedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+}, { tableName: "siteSettings", timestamps: false });
+
 const PromoCode = sequelize.define("PromoCode", {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   code: { type: DataTypes.STRING(50), allowNull: false, unique: true },
@@ -476,6 +486,6 @@ async function initDb() {
 module.exports = {
   sequelize, Op,
   CATEGORIES, CATEGORY_VALUES,
-  User, Product, Order, OrderItem, Cart, Wishlist, Review, PromoCode,
+  User, Product, Order, OrderItem, Cart, Wishlist, Review, PromoCode, SiteSetting,
   initDb, sizeOptionsFor,
 };

@@ -5,6 +5,25 @@ import { formatPrice, toNumber } from '@/const';
 import InfiniteProductScroller from '@/components/InfiniteProductScroller';
 import { useSEO } from '@/hooks/useSEO';
 
+// Shown immediately (before the content.homepage query resolves) and as the
+// fallback if it fails — matches the backend's DEFAULT_HOMEPAGE_CONTENT, so
+// the page never flashes empty or broken while loading.
+const DEFAULT_CONTENT = {
+  heroImage: '/images/products/photo-1486427944299-d1955d23e34d.jpg',
+  heroEyebrow: '✦ Handcrafted Dessert Candles',
+  heroHeading: 'Scents That Speak to the Soul',
+  heroParagraph:
+    'From our hands to your home — fragrances that uplift, inspire, and create a sense of belonging. Made with love, crafted with care.',
+  storyImage: '/images/products/photo-1565958011703-44f9829ba187.jpg',
+  storyHeading: 'Candles That Feel Like Home',
+  storyParagraph1:
+    'Curate your space with our Signature Candles made with 100% pure soy wax and timeless fragrances. Each candle is hand-poured with intention, blending art and science to create moments of peace and warmth.',
+  storyParagraph2:
+    "We believe that the right scent can transform a space, elevate a mood, and create lasting memories. That's why we're committed to using only the finest ingredients and sustainable practices.",
+  badgeNumber: '100%',
+  badgeLabel: 'Natural Soy Wax',
+};
+
 export default function Home() {
   const [, navigate] = useLocation();
 
@@ -12,6 +31,13 @@ export default function Home() {
     title: 'Handcrafted Dessert Candles in Pakistan',
     description:
       'Whip&Pour makes handcrafted dessert-shaped candles — cheesecake, cupcake, iced latte and dessert jar candles — poured in small batches and delivered across Pakistan.',
+  });
+
+  // Admin-editable (Admin → Site Content). Falls back to the defaults above
+  // if nothing's been saved yet, or if the request fails for any reason.
+  const { data: content = DEFAULT_CONTENT } = trpc.content.homepage.useQuery(undefined, {
+    staleTime: 60_000,
+    retry: false,
   });
 
   const { data: products = [] } = trpc.products.list.useQuery({
@@ -33,11 +59,11 @@ export default function Home() {
       <section className="relative h-screen bg-[#111] overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src="https://www.honeyimhomecandles.com/cdn/shop/files/Desktop_Hero_1.png?format=pjpg&v=1744109622&width=1900"
+            src={content.heroImage}
             alt="Luxury Candles"
             className="w-full h-full object-cover opacity-70"
             onError={(e) => {
-              e.currentTarget.src = '/images/products/photo-1486427944299-d1955d23e34d.jpg';
+              e.currentTarget.src = DEFAULT_CONTENT.heroImage;
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/40 to-black/10" />
@@ -47,13 +73,13 @@ export default function Home() {
           <div className="container mx-auto px-4 md:px-8 max-w-7xl">
             <div className="max-w-2xl">
               <p className="text-xs font-bold tracking-[0.3em] text-[#C9A84C] uppercase mb-4">
-                ✦ Handcrafted Dessert Candles
+                {content.heroEyebrow}
               </p>
               <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Scents That Speak to the Soul
+                {content.heroHeading}
               </h1>
               <p className="text-xl text-gray-200 mb-8 leading-relaxed">
-                From our hands to your home — fragrances that uplift, inspire, and create a sense of belonging. Made with love, crafted with care.
+                {content.heroParagraph}
               </p>
               <div className="flex flex-wrap gap-4">
                 <button
@@ -162,13 +188,13 @@ export default function Home() {
             <div>
               <p className="text-xs font-bold tracking-[0.3em] text-[#C9A84C] uppercase mb-4">— Our Story —</p>
               <h2 className="text-4xl md:text-5xl font-bold text-[#2C2C2C] mb-6" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Candles That Feel Like Home
+                {content.storyHeading}
               </h2>
               <p className="text-lg text-[#666] mb-6 leading-relaxed">
-                Curate your space with our Signature Candles made with 100% pure soy wax and timeless fragrances. Each candle is hand-poured with intention, blending art and science to create moments of peace and warmth.
+                {content.storyParagraph1}
               </p>
               <p className="text-lg text-[#666] mb-8 leading-relaxed">
-                We believe that the right scent can transform a space, elevate a mood, and create lasting memories. That's why we're committed to using only the finest ingredients and sustainable practices.
+                {content.storyParagraph2}
               </p>
               <button
                 onClick={() => navigate('/shop')}
@@ -180,17 +206,17 @@ export default function Home() {
             </div>
             <div className="relative">
               <img
-                src="https://images.unsplash.com/photo-1603808033192-082d6919d3e1?w=600&h=600&fit=crop"
+                src={content.storyImage}
                 alt="Luxury Candle Setup"
                 className="rounded-lg shadow-2xl"
                 onError={(e) => {
-                  e.currentTarget.src = '/images/products/photo-1565958011703-44f9829ba187.jpg';
+                  e.currentTarget.src = DEFAULT_CONTENT.storyImage;
                 }}
               />
               {/* Floating badge */}
               <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-5 border border-[#E8DDD0]">
-                <p className="text-3xl font-bold text-[#C9A84C]">100%</p>
-                <p className="text-sm text-[#7A7066] font-medium">Natural Soy Wax</p>
+                <p className="text-3xl font-bold text-[#C9A84C]">{content.badgeNumber}</p>
+                <p className="text-sm text-[#7A7066] font-medium">{content.badgeLabel}</p>
               </div>
             </div>
           </div>
