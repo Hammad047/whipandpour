@@ -33,23 +33,40 @@ const storage = multer.diskStorage({
   },
 });
 
+// SVG is excluded on purpose: it can carry script, and these files are served
+// from the API origin.
+const ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
 const upload = multer({
   storage,
 
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: MAX_FILE_BYTES,
   },
 
   fileFilter: (_req, file, cb) => {
-    if (!file.mimetype.startsWith("image/")) {
-      return cb(new Error("Only image files are allowed"));
+    const extension = path.extname(file.originalname).toLowerCase();
+    if (!file.mimetype.startsWith("image/") || !ALLOWED_EXTENSIONS.has(extension)) {
+      return cb(new Error("Only JPG, PNG, WEBP or GIF images are allowed"));
     }
 
     cb(null, true);
   },
 });
 
-router.post("/image", upload.single("image"), async (req, res) => {
+const uploadSingleImage = (req, res, next) => {
+  upload.single("image")(req, res, (err) => {
+    if (!err) return next();
+    const message =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "Image must be smaller than 5MB"
+        : err.message || "Image upload failed";
+    return res.status(400).json({ success: false, message });
+  });
+};
+
+router.post("/image", uploadSingleImage, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({

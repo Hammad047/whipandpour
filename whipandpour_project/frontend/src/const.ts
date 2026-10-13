@@ -33,6 +33,10 @@ export const toNumber = (value: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+/** Must match FREE_SHIPPING_THRESHOLD / SHIPPING_FLAT_RATE in backend-node/routers/orders.js. */
+export const FREE_SHIPPING_THRESHOLD = 4000;
+export const SHIPPING_FLAT_RATE = 200;
+
 /** Store currency is Pakistani Rupees. Never render a $ amount. */
 export const formatPrice = (value: unknown): string =>
   `PKR ${toNumber(value).toLocaleString("en-PK", { maximumFractionDigits: 0 })}`;

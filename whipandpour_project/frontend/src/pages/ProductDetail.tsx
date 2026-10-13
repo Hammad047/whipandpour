@@ -283,7 +283,7 @@ export default function ProductDetail({ params }: { params: { slug: string } }) 
             </div>
 
             {/* Description */}
-            <p className="text-lg text-[#666] mb-8 leading-relaxed">{product.description}</p>
+            <p className="text-lg text-[#666] mb-8 leading-relaxed whitespace-pre-line">{product.description}</p>
 
             {/* Scent Notes */}
             {scentNotes.length > 0 && (

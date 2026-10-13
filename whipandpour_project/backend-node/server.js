@@ -634,8 +634,20 @@ async function start() {
   await initDb();
   console.log("[Startup] Database ready.");
 
-  app.use("/api/admin/upload", uploadRouter);
-app.listen(PORT, "0.0.0.0", () => {
+  app.use(
+    "/api/admin/upload",
+    async (req, res, next) => {
+      try {
+        await requireAdmin(req);
+        next();
+      } catch (err) {
+        res.status(err.httpStatus || 401).json({ success: false, message: err.message });
+      }
+    },
+    uploadRouter
+  );
+
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Startup] Listening on port ${PORT}`);
   });
 }

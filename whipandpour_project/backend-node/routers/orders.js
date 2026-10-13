@@ -6,7 +6,7 @@
 
 const crypto = require("crypto");
 const { fn, col, where: sequelizeWhere } = require("sequelize");
-const { sequelize, Order, OrderItem, Product, User, PromoCode } = require("../db");
+const { sequelize, Op, Order, OrderItem, Product, User, PromoCode } = require("../db");
 const { TRPCError } = require("../auth");
 const { Decimal, q2, money } = require("../money");
 
@@ -296,6 +296,13 @@ async function createOrderFromCart(currentUser, data) {
     const promo = await PromoCode.findOne({ where: { code: promoCode, isActive: true } });
     if (!promo) throw new TRPCError("That promo code is not valid", "BAD_REQUEST");
 
+    if (promo.expiryDate && new Date(promo.expiryDate) < new Date()) {
+      throw new TRPCError("That promo code has expired", "BAD_REQUEST");
+    }
+    if (promo.usageLimit != null && (promo.usedCount || 0) >= promo.usageLimit) {
+      throw new TRPCError("That promo code has reached its usage limit", "BAD_REQUEST");
+    }
+
     if (promo.firstOrderOnly) {
       // Any prior order for this email — regardless of status — counts as
       // "not a first order". Checked here, server-side, against the
@@ -367,6 +374,25 @@ async function createOrderFromCart(currentUser, data) {
       },
       { transaction: t }
     );
+
+    if (promoCode) {
+      // Conditional increment: concurrent checkouts cannot both take the last use.
+      const [redeemed] = await PromoCode.update(
+        { usedCount: sequelize.literal('"usedCount" + 1') },
+        {
+          where: {
+            code: promoCode,
+            isActive: true,
+            [Op.or]: [
+              { usageLimit: null },
+              sequelizeWhere(col("usedCount"), Op.lt, col("usageLimit")),
+            ],
+          },
+          transaction: t,
+        }
+      );
+      if (!redeemed) throw new TRPCError("That promo code has reached its usage limit", "BAD_REQUEST");
+    }
 
     for (const item of pricedItems) {
       await OrderItem.create(

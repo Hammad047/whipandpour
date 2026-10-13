@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { trpc } from '@/lib/trpc';
-import { formatPrice, toNumber } from '@/const';
+import { formatPrice, toNumber, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT_RATE } from '@/const';
+import { promoDiscount } from '@/hooks/usePromoCode';
 
 /**
  * Checkout
@@ -104,10 +105,6 @@ const PAKISTAN_PROVINCES = [
   'Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan',
   'Islamabad Capital Territory', 'Gilgit-Baltistan', 'Azad Jammu & Kashmir',
 ];
-
-// Must match FREE_SHIPPING_THRESHOLD in backend/routers/orders.py.
-const FREE_SHIPPING_THRESHOLD = 4000;
-const SHIPPING_FLAT_RATE = 200;
 
 // Must match ADVANCE_ITEM_THRESHOLD / ADVANCE_PERCENT in backend/routers/orders.py.
 // This is a preview only — the server always recomputes and is authoritative.
@@ -208,14 +205,7 @@ export default function Checkout() {
   const subtotal = getTotal();
   const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0 ? 0 : SHIPPING_FLAT_RATE;
 
-  const discountAmount = useMemo(() => {
-    if (!promo || promo.isActive === false) return 0;
-    if (subtotal < toNumber(promo.minOrderAmount)) return 0;
-    const value = toNumber(promo.value);
-    return promo.discountType === 'percent'
-      ? Math.min(subtotal * (value / 100), subtotal)
-      : Math.min(value, subtotal);
-  }, [promo, subtotal]);
+  const discountAmount = promoDiscount(promo, subtotal);
 
   const total = subtotal + shippingCost + giftFee - discountAmount;
 

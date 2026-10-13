@@ -1,11 +1,16 @@
 import { X, Minus, Plus, Trash2 } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
-import { formatPrice } from '@/const';
+import { usePromoCode } from '@/hooks/usePromoCode';
+import { formatPrice, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT_RATE } from '@/const';
 import { useLocation } from 'wouter';
 
 export default function CartDrawerComponent() {
   const { items, isOpen, setIsOpen, removeItem, updateQuantity, getTotal } = useCart();
   const [, navigate] = useLocation();
+  const subtotal = getTotal();
+  const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT_RATE;
+  const promo = usePromoCode(subtotal);
+  const total = Math.max(0, subtotal - promo.discount) + shipping;
 
   const handleCheckout = () => {
     setIsOpen(false);
@@ -112,30 +117,51 @@ export default function CartDrawerComponent() {
         {items.length > 0 && (
           <div className="border-t border-[#E8DDD0] p-6 space-y-4">
             {/* Promo Code */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Promo code"
-                className="flex-1 px-3 py-2 border border-[#E8DDD0] rounded-lg text-sm focus:outline-none focus:border-[#C9A84C]"
-              />
-              <button className="px-4 py-2 bg-[#E8DDD0] text-[#2C2C2C] rounded-lg font-medium hover:bg-[#D4A5A5] transition-colors text-sm">
-                Apply
-              </button>
-            </div>
+            {promo.appliedCode ? (
+              <div className="flex items-center justify-between px-3 py-2 bg-[#FAF7F2] border border-[#C9A84C] rounded-lg text-sm">
+                <span className="font-semibold text-[#2C2C2C] tracking-wide">{promo.appliedCode} applied</span>
+                <button onClick={promo.remove} className="text-xs font-semibold text-[#7A7066] hover:text-[#D4A5A5] transition-colors">
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promo.input}
+                  onChange={(e) => promo.setInput(e.target.value.toUpperCase())}
+                  placeholder="Promo code"
+                  className="flex-1 px-3 py-2 border border-[#E8DDD0] rounded-lg text-sm focus:outline-none focus:border-[#C9A84C]"
+                />
+                <button
+                  type="button"
+                  onClick={promo.apply}
+                  className="px-4 py-2 bg-[#E8DDD0] text-[#2C2C2C] rounded-lg font-medium hover:bg-[#D4A5A5] transition-colors text-sm"
+                >
+                  Apply
+                </button>
+              </div>
+            )}
 
             {/* Totals */}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-[#7A7066]">
                 <span>Subtotal</span>
-                <span>{formatPrice(getTotal())}</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
+              {promo.discount > 0 && (
+                <div className="flex justify-between text-[#D4A5A5]">
+                  <span>Discount</span>
+                  <span>-{formatPrice(promo.discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-[#7A7066]">
                 <span>Shipping</span>
-                <span>Free</span>
+                <span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span>
               </div>
               <div className="flex justify-between font-bold text-[#2C2C2C] text-lg pt-2 border-t border-[#E8DDD0]">
                 <span>Total</span>
-                <span className="text-[#C9A84C]">{formatPrice(getTotal())}</span>
+                <span className="text-[#C9A84C]">{formatPrice(total)}</span>
               </div>
             </div>
 

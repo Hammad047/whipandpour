@@ -199,7 +199,7 @@ export default function AdminContent() {
 
             <button
               onClick={handleSave}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || !content}
               className="w-full py-3 bg-[#C9A84C] text-[#2C2C2C] rounded-xl font-bold hover:bg-[#D4A5A5] transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {saveMutation.isPending && <Loader2 size={16} className="animate-spin" />}

@@ -38,15 +38,23 @@ export default function InfiniteProductScroller({
   // FALLBACK_PRODUCTS list referenced discontinued items and dead image URLs.
   const displayProducts = products;
 
-  // Duplicate the list so the scroll loops seamlessly
-  const doubled = [...displayProducts, ...displayProducts, ...displayProducts];
-
   const CARD_WIDTH = 280; // px
   const GAP = 24; // px
   const ITEM_WIDTH = CARD_WIDTH + GAP;
+
+  // Below this many products the loop would show the same card several times
+  // across one viewport, so the cards are rendered once and not animated.
+  const MIN_ITEMS_TO_LOOP = 7;
+  const shouldLoop = displayProducts.length >= MIN_ITEMS_TO_LOOP;
+
+  const doubled = shouldLoop
+    ? [...displayProducts, ...displayProducts, ...displayProducts]
+    : displayProducts;
   const loopAt = ITEM_WIDTH * displayProducts.length;
 
   useEffect(() => {
+    if (!shouldLoop) return;
+
     let lastTime: number | null = null;
 
     const animate = (timestamp: number) => {
@@ -67,7 +75,7 @@ export default function InfiniteProductScroller({
 
     animFrameRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [speed, loopAt]);
+  }, [speed, loopAt, shouldLoop]);
 
   useEffect(() => {
     pausedRef.current = isHovered;
@@ -113,8 +121,8 @@ export default function InfiniteProductScroller({
         >
           <div
             ref={trackRef}
-            className="flex will-change-transform"
-            style={{ gap: `${GAP}px`, paddingLeft: `${GAP}px` }}
+            className={shouldLoop ? 'flex will-change-transform' : 'flex flex-wrap justify-center will-change-transform'}
+            style={shouldLoop ? { gap: `${GAP}px`, paddingLeft: `${GAP}px` } : { gap: `${GAP}px` }}
           >
             {doubled.map((product, idx) => (
               <button

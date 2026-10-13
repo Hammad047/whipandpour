@@ -1,30 +1,17 @@
-import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Trash2, Plus, Minus, ArrowRight } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
-import { trpc } from '@/lib/trpc';
-import { formatPrice, toNumber } from '@/const';
-import { toast } from 'sonner';
-
-// Must match FREE_SHIPPING_THRESHOLD / SHIPPING_FLAT_RATE in backend/routers/orders.py.
-const FREE_SHIPPING_THRESHOLD = 4000;
-const SHIPPING_FLAT_RATE = 200;
+import { usePromoCode } from '@/hooks/usePromoCode';
+import { formatPrice, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT_RATE } from '@/const';
 
 export default function Cart() {
   const [, navigate] = useLocation();
-  // This page used to keep its own `useState<CartItem[]>([])`, so it was never
-  // connected to the cart and always rendered the empty state no matter what
-  // the shopper had added.
-  const { items, updateQuantity, removeItem, promoCode: appliedCode, applyPromoCode, clearPromoCode } = useCart();
-  const [promoCode, setPromoCode] = useState(appliedCode ?? '');
-  const [discount, setDiscount] = useState(0);
-
+  const { items, updateQuantity, removeItem } = useCart();
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT_RATE;
-  const total = Math.max(0, subtotal - discount) + shipping;
-
-  const utils = trpc.useUtils();
+  const promo = usePromoCode(subtotal);
+  const total = Math.max(0, subtotal - promo.discount) + shipping;
 
   const handleUpdateQuantity = (id: string, quantity: number) => {
     updateQuantity(id, quantity);
@@ -32,54 +19,6 @@ export default function Cart() {
 
   const handleRemoveItem = (id: string) => {
     removeItem(id);
-  };
-
-  /**
-   * Promo codes are validated against the database rather than compared to a
-   * literal in the browser. The discount shown here is indicative — checkout
-   * recalculates it server-side before the order is written.
-   */
-  const handleApplyPromo = async () => {
-    const code = promoCode.trim().toUpperCase();
-    if (!code) return;
-
-    try {
-      const promo: any = await utils.promos.validate.fetch({ code });
-
-      if (!promo || promo.isActive === false) {
-        setDiscount(0);
-        clearPromoCode();
-        toast.error('That promo code is not valid');
-        return;
-      }
-
-      const minOrder = toNumber(promo.minOrderAmount);
-      if (subtotal < minOrder) {
-        setDiscount(0);
-        clearPromoCode();
-        toast.error(`This code needs a minimum order of ${formatPrice(minOrder)}`);
-        return;
-      }
-
-      const value = toNumber(promo.value);
-      const amount =
-        promo.discountType === 'percent'
-          ? Math.min(subtotal * (value / 100), subtotal)
-          : Math.min(value, subtotal);
-
-      setDiscount(amount);
-      applyPromoCode(code);
-      toast.success(`${code} applied — ${formatPrice(amount)} off, confirmed at checkout`);
-    } catch (error: any) {
-      setDiscount(0);
-      clearPromoCode();
-      toast.error(error?.message ?? 'That promo code is not valid');
-    }
-  };
-  const handleRemovePromo = () => {
-    setPromoCode('');
-    setDiscount(0);
-    clearPromoCode();
   };
 
   if (items.length === 0) {
@@ -195,11 +134,11 @@ export default function Cart() {
                 <label className="block text-sm font-medium text-[#2C2C2C] mb-2">
                   Promo Code
                 </label>
-                {appliedCode ? (
+                {promo.appliedCode ? (
                   <div className="flex items-center justify-between px-3 py-2 bg-[#FAF7F2] border border-[#C9A84C] rounded-lg">
-                    <span className="text-sm font-semibold text-[#2C2C2C] tracking-wide">{appliedCode} applied</span>
+                    <span className="text-sm font-semibold text-[#2C2C2C] tracking-wide">{promo.appliedCode} applied</span>
                     <button
-                      onClick={handleRemovePromo}
+                      onClick={promo.remove}
                       className="text-xs font-semibold text-[#7A7066] hover:text-[#D4A5A5] transition-colors"
                     >
                       Remove
@@ -209,14 +148,14 @@ export default function Cart() {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      value={promo.input}
+                      onChange={(e) => promo.setInput(e.target.value.toUpperCase())}
                       placeholder="Enter code"
                       className="flex-1 px-3 py-2 border border-[#E8DDD0] rounded-lg text-[#2C2C2C] placeholder-[#7A7066] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
                     />
                     <button
                       type="button"
-                      onClick={handleApplyPromo}
+                      onClick={promo.apply}
                       className="px-4 py-2 bg-[#C9A84C] text-[#2C2C2C] rounded-lg font-medium hover:bg-[#D4A5A5] transition-colors"
                     >
                       Apply
@@ -231,10 +170,10 @@ export default function Cart() {
                   <span>Subtotal</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
-                {discount > 0 && (
+                {promo.discount > 0 && (
                   <div className="flex justify-between text-[#D4A5A5]">
                     <span>Discount</span>
-                    <span>-{formatPrice(discount)}</span>
+                    <span>-{formatPrice(promo.discount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-[#7A7066]">

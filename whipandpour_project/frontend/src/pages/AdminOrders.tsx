@@ -224,12 +224,12 @@ export default function AdminOrders() {
       {/* Detail Modal */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between p-6 border-b border-[#E8DDD0]">
               <h2 className="text-lg font-bold text-[#2C2C2C]">Order {selectedOrder.orderNumber}</h2>
               <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-[#E8DDD0] rounded-lg"><X size={18} /></button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto min-h-0">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div><p className="text-xs text-[#7A7066] mb-1">Customer</p><p className="font-semibold text-[#2C2C2C]">{selectedOrder.customerName}</p></div>
                 <div><p className="text-xs text-[#7A7066] mb-1">Email</p><p className="font-medium text-[#2C2C2C] text-xs break-all">{selectedOrder.customerEmail}</p></div>
@@ -340,7 +340,7 @@ export default function AdminOrders() {
             </div>
             <div className="p-6 border-t border-[#E8DDD0]">
               <button onClick={() => setSelectedOrder(null)} className="w-full py-2.5 border border-[#E8DDD0] text-[#7A7066] rounded-xl font-semibold hover:bg-[#FAF7F2] transition-colors">
-                Close
+                Back to Orders
               </button>
             </div>
           </div>
