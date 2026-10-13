@@ -229,6 +229,15 @@ async function adminProductsDelete(productId) {
   return { id: productId, deleted: true, deactivated: false, message: "Product deleted" };
 }
 
+async function adminProductsSetActive(productId, isActive) {
+  const product = await Product.findByPk(productId);
+  if (!product) throw new TRPCError("Product not found", "NOT_FOUND");
+
+  product.isActive = isActive;
+  await product.save();
+  return adminSerialize(product);
+}
+
 // ─── Inventory ───────────────────────────────────────────────────────────────
 
 async function adminInventoryRestock(productId, amount) {
@@ -750,7 +759,7 @@ async function adminPaymentsList() {
 }
 
 module.exports = {
-  adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete,
+  adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete, adminProductsSetActive,
   adminInventoryRestock, adminInventorySetStock,
   adminCustomersList,
   adminOrdersList, adminOrdersUpdateStatus, adminOrdersMarkAdvancePaid,

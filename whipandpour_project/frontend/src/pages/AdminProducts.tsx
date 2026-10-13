@@ -95,6 +95,14 @@ export default function AdminProducts() {
     onError: (e: any) => toast.error(e?.message ?? 'Could not delete the product'),
   });
 
+  const setProductActive = trpc.admin.products.setActive.useMutation({
+    onSuccess: (product: any) => {
+      invalidateAll();
+      toast.success(`“${product.name}” is visible in the store`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Could not unhide the product'),
+  });
+
   const isSaving = createProduct.isPending || updateProduct.isPending;
 
   if (isCheckingSession) {
@@ -334,7 +342,17 @@ export default function AdminProducts() {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                      {product.isActive === false && (
+                        <button
+                          onClick={() => setProductActive.mutate({ id: product.id, isActive: true })}
+                          disabled={setProductActive.isPending}
+                          className="px-3 py-1.5 text-xs font-semibold bg-[#C9A84C] text-[#2C2C2C] rounded-lg hover:bg-[#D4A5A5] transition-colors disabled:opacity-40"
+                          title="Show this product in the store again"
+                        >
+                          Unhide
+                        </button>
+                      )}
                       <button onClick={() => openEditForm(product)} className="p-2 text-[#C9A84C] hover:bg-[#E8DDD0] rounded-lg transition-colors" title="Edit"><Edit2 size={15} /></button>
                       <button onClick={() => handleDelete(product)} disabled={deleteProduct.isPending} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40" title="Delete"><Trash2 size={15} /></button>
                     </div>

@@ -38,7 +38,7 @@ const {
   GIFT_MESSAGE_MAX_LENGTH, GIFT_PACKAGING_FEE,
 } = require("./routers/orders");
 const {
-  adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete,
+  adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete, adminProductsSetActive,
   adminInventoryRestock, adminInventorySetStock,
   adminCustomersList,
   adminOrdersList, adminOrdersUpdateStatus, adminOrdersMarkAdvancePaid,
@@ -302,6 +302,14 @@ async function dispatchProcedure(procedure, inputData, isMutation, req, res) {
       if (!isMutation) throw new TRPCError("Delete must be a mutation", "METHOD_NOT_SUPPORTED");
       if (!inp || inp.id == null) throw new TRPCError("id is required", "BAD_REQUEST");
       return adminProductsDelete(Number(inp.id));
+    }
+
+    if (procedure === "admin.products.setActive") {
+      if (!isMutation) throw new TRPCError("setActive must be a mutation", "METHOD_NOT_SUPPORTED");
+      if (!inp || inp.id == null || typeof inp.isActive !== "boolean") {
+        throw new TRPCError("id and a boolean isActive are required", "BAD_REQUEST");
+      }
+      return adminProductsSetActive(Number(inp.id), inp.isActive);
     }
 
     if (procedure === "admin.inventory.restock") {
