@@ -7,8 +7,8 @@
  * whose user row has role === 'admin'.
  */
 
-const { Op } = require("sequelize");
-const { Collection, Order, OrderItem, Product, User, PromoCode, Review } = require("../db");
+const { Op, fn, col } = require("sequelize");
+const { sequelize, Collection, Order, OrderItem, Product, User, PromoCode, Review } = require("../db");
 const { TRPCError } = require("../auth");
 const { serializeProduct } = require("./products");
 const { Decimal, q2, money } = require("../money");
@@ -231,18 +231,129 @@ function slugifyCollection(label) {
   return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
 }
 
+// Collections are never removed from the public list by being deleted from
+// the database alone: deactivating hides one, and deleting moves its products.
+function serializeCollection(collection, productCount) {
+  return {
+    value: collection.slug,
+    label: collection.label,
+    description: collection.description ?? null,
+    coverImage: collection.coverImage ?? null,
+    isActive: Boolean(collection.isActive),
+    sortOrder: collection.sortOrder,
+    productCount,
+  };
+}
+
+async function productCountsByCollection() {
+  const rows = await Product.findAll({
+    attributes: ["category", [fn("COUNT", col("id")), "total"]],
+    group: ["category"],
+    raw: true,
+  });
+  return Object.fromEntries(rows.map((r) => [r.category, Number(r.total)]));
+}
+
+function collectionFields(data, { requireLabel }) {
+  const fields = {};
+
+  if (data.label !== undefined || requireLabel) {
+    fields.label = requireStr(data, "label", { maxLen: 100 }).trim();
+  }
+
+  if (data.description !== undefined) {
+    if (data.description !== null && typeof data.description !== "string") {
+      throw new TRPCError("description must be text", "BAD_REQUEST");
+    }
+    const text = (data.description || "").trim();
+    if (text.length > 500) throw new TRPCError("description must be 500 characters or fewer", "BAD_REQUEST");
+    fields.description = text || null;
+  }
+
+  if (data.coverImage !== undefined) {
+    if (data.coverImage !== null && typeof data.coverImage !== "string") {
+      throw new TRPCError("coverImage must be a link", "BAD_REQUEST");
+    }
+    const url = (data.coverImage || "").trim();
+    if (url && !/^(https?:\/\/|\/)/.test(url)) {
+      throw new TRPCError("Cover image must be an uploaded image or a link starting with http(s)://", "BAD_REQUEST");
+    }
+    if (url.length > 500) throw new TRPCError("Cover image link is too long", "BAD_REQUEST");
+    fields.coverImage = url || null;
+  }
+
+  if (data.isActive !== undefined) {
+    if (typeof data.isActive !== "boolean") throw new TRPCError("isActive must be true or false", "BAD_REQUEST");
+    fields.isActive = data.isActive;
+  }
+
+  return fields;
+}
+
+async function adminCollectionsList() {
+  const [collections, counts] = await Promise.all([
+    Collection.findAll({ order: [["sortOrder", "ASC"], ["label", "ASC"]] }),
+    productCountsByCollection(),
+  ]);
+  return collections.map((c) => serializeCollection(c, counts[c.slug] || 0));
+}
+
 async function adminCollectionsCreate(data) {
   if (!data || typeof data !== "object") throw new TRPCError("Collection data is required", "BAD_REQUEST");
-  const label = requireStr(data, "label", { maxLen: 100 }).trim();
-  const slug = slugifyCollection(label);
-  if (!slug) throw new TRPCError("Collection name must contain a letter or number", "BAD_REQUEST");
+  const fields = collectionFields(data, { requireLabel: true });
 
-  const existing = await Collection.findByPk(slug);
-  if (existing) return { value: existing.slug, label: existing.label };
+  const slug = slugifyCollection(fields.label);
+  if (!slug) throw new TRPCError("Collection name must contain a letter or number", "BAD_REQUEST");
+  if (slug === "all") throw new TRPCError("“All” is reserved. Choose another name.", "BAD_REQUEST");
+  if (await Collection.findByPk(slug)) {
+    throw new TRPCError(`A collection named “${fields.label}” already exists`, "CONFLICT");
+  }
 
   const last = await Collection.max("sortOrder");
-  const collection = await Collection.create({ slug, label, sortOrder: (last || 0) + 1 });
-  return { value: collection.slug, label: collection.label };
+  const collection = await Collection.create({
+    slug,
+    isActive: true,
+    ...fields,
+    sortOrder: (last || 0) + 1,
+  });
+  return serializeCollection(collection, 0);
+}
+
+async function adminCollectionsUpdate(slug, data) {
+  const collection = await Collection.findByPk(slug);
+  if (!collection) throw new TRPCError("Collection not found", "NOT_FOUND");
+  if (!data || typeof data !== "object") throw new TRPCError("Collection data is required", "BAD_REQUEST");
+
+  await collection.update(collectionFields(data, { requireLabel: false }));
+  const counts = await productCountsByCollection();
+  return serializeCollection(collection, counts[slug] || 0);
+}
+
+async function adminCollectionsDelete(slug, moveTo) {
+  const collection = await Collection.findByPk(slug);
+  if (!collection) throw new TRPCError("Collection not found", "NOT_FOUND");
+
+  const productCount = await Product.count({ where: { category: slug } });
+  let target = null;
+  if (productCount > 0) {
+    if (!moveTo || moveTo === slug) {
+      throw new TRPCError(
+        `This collection has ${productCount} product${productCount === 1 ? "" : "s"}. Choose another collection to move ${productCount === 1 ? "it" : "them"} into.`,
+        "BAD_REQUEST"
+      );
+    }
+    target = await Collection.findByPk(moveTo);
+    if (!target) throw new TRPCError("The collection to move products into does not exist", "BAD_REQUEST");
+  }
+
+  await sequelize.transaction(async (t) => {
+    if (target) {
+      await Product.update({ category: target.slug }, { where: { category: slug }, transaction: t });
+    }
+    await collection.destroy({ transaction: t });
+  });
+
+  return { deleted: slug, movedProducts: productCount, movedTo: target ? target.slug : null };
 }
 
 async function adminProductsSetActive(productId, isActive) {
@@ -773,7 +884,8 @@ async function adminPaymentsList() {
 }
 
 module.exports = {
-  adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete, adminProductsSetActive, adminCollectionsCreate,
+  adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete, adminProductsSetActive,
+  adminCollectionsList, adminCollectionsCreate, adminCollectionsUpdate, adminCollectionsDelete,
   adminInventoryRestock, adminInventorySetStock,
   adminCustomersList,
   adminOrdersList, adminOrdersUpdateStatus, adminOrdersMarkAdvancePaid,

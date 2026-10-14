@@ -53,6 +53,7 @@ export default function AdminProducts() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState(emptyForm);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [brokenImages, setBrokenImages] = useState<string[]>([]);
   const [imageLink, setImageLink] = useState('');
   const [addingCollection, setAddingCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
@@ -417,7 +418,7 @@ export default function AdminProducts() {
                     }}
                     className="w-full px-3 py-2.5 border border-[#E8DDD0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]">
                     {collections.map((cat) => (
-                      <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>
+                      <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}{cat.isActive === false ? ' (inactive)' : ''}</option>
                     ))}
                     <option value="__new__">+ New collection</option>
                   </select>
@@ -535,7 +536,7 @@ export default function AdminProducts() {
                               src={img}
                               alt=""
                               className="w-full aspect-square rounded-xl object-cover border border-[#E8DDD0] bg-[#FAF7F2]"
-                              onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+                              onError={() => setBrokenImages((list) => (list.includes(img) ? list : [...list, img]))}
                             />
                             {idx === 0 && (
                               <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-[#C9A84C] text-[#2C2C2C] text-[10px] font-bold rounded">
@@ -543,6 +544,9 @@ export default function AdminProducts() {
                               </span>
                             )}
                           </div>
+                          {brokenImages.includes(img) && (
+                            <p className="text-[11px] text-red-600 mt-1">Failed to load. Upload it again.</p>
+                          )}
                           <div className="flex justify-between gap-1 mt-1">
                             {idx > 0 ? (
                               <button type="button" onClick={() => setMainImage(idx)} className="text-[11px] font-semibold text-[#C9A84C] hover:underline">

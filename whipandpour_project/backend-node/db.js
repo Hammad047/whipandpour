@@ -217,6 +217,9 @@ const SiteSetting = sequelize.define("SiteSetting", {
 const Collection = sequelize.define("Collection", {
   slug: { type: DataTypes.STRING(50), primaryKey: true },
   label: { type: DataTypes.STRING(100), allowNull: false },
+  description: { type: DataTypes.TEXT, allowNull: true },
+  coverImage: { type: DataTypes.STRING(500), allowNull: true },
+  isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
   sortOrder: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
 }, { tableName: "collections", timestamps: false });
 
@@ -490,6 +493,18 @@ async function initDb() {
     const qi = sequelize.getQueryInterface();
     await qi.changeColumn(Product.getTableName(), "category", { type: DataTypes.STRING(50), allowNull: false });
     await qi.changeColumn(PromoCode.getTableName(), "applicableCategory", { type: DataTypes.STRING(50), defaultValue: "all" });
+  }
+
+  // Databases created before these columns existed get them added in place.
+  const qi = sequelize.getQueryInterface();
+  const existing = await qi.describeTable(Collection.getTableName());
+  const newColumns = {
+    description: { type: DataTypes.TEXT, allowNull: true },
+    coverImage: { type: DataTypes.STRING(500), allowNull: true },
+    isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+  };
+  for (const [name, definition] of Object.entries(newColumns)) {
+    if (!existing[name]) await qi.addColumn(Collection.getTableName(), name, definition);
   }
 
   let order = 0;

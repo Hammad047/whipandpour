@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { useCollections } from '@/hooks/useCollections';
+import { useActiveCollections } from '@/hooks/useCollections';
 
 const TOP_BAR_MESSAGES = [
   'FREE DELIVERY ON ORDERS OVER PKR 4,000  |  HANDCRAFTED WITH LOVE 🕯️',
@@ -14,7 +14,7 @@ const TOP_BAR_MESSAGES = [
 ];
 
 export default function Navbar() {
-  const collections = useCollections();
+  const collections = useActiveCollections();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bannerIndex, setBannerIndex] = useState(0);
 
@@ -130,7 +130,7 @@ export default function Navbar() {
                         <button
                           key={cat.value}
                           onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => goTo(`/shop?category=${cat.value}`)}
+                          onClick={() => goTo(`/collection/${cat.value}`)}
                           className="block w-full text-left px-5 py-3 text-sm text-[#2C2C2C] hover:bg-[#FAF7F2] hover:text-[#C9A84C] transition-colors font-medium"
                         >
                           {cat.icon} {cat.label}
@@ -311,7 +311,7 @@ export default function Navbar() {
                   {collections.map((cat) => (
                     <button
                       key={cat.value}
-                      onClick={() => goTo(`/shop?category=${cat.value}`)}
+                      onClick={() => goTo(`/collection/${cat.value}`)}
                       className="block w-full text-left px-4 py-2 rounded-xl text-sm text-[#2C2C2C] hover:bg-white hover:text-[#C9A84C] transition-all"
                     >
                       {cat.icon} {cat.label}

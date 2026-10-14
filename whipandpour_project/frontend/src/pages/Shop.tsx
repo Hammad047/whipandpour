@@ -4,7 +4,7 @@ import { Search, SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
 import { trpc } from '@/lib/trpc';
 import { categoryLabel, formatPrice, getCollectionOptions } from '@/const';
-import { useCollections } from '@/hooks/useCollections';
+import { useActiveCollections } from '@/hooks/useCollections';
 import { useSEO } from '@/hooks/useSEO';
 
 type SortBy = 'newest' | 'price-asc' | 'price-desc' | 'rating' | 'name';
@@ -28,7 +28,7 @@ const PRICE_FLOOR = 0;
 const PRICE_CEILING = 6000;
 
 export default function Shop() {
-  const collections = useCollections();
+  const collections = useActiveCollections();
   const [location, navigate] = useLocation();
 
   const [search, setSearch] = useState('');
@@ -48,7 +48,7 @@ export default function Shop() {
     const nextCategory = params.get('category');
     const nextSearch = params.get('search');
     setCategory(
-      nextCategory && getCollectionOptions().some((c) => c.value === nextCategory) ? nextCategory : 'all'
+      nextCategory && getCollectionOptions().some((c) => c.value === nextCategory && c.isActive !== false) ? nextCategory : 'all'
     );
     setSearch(nextSearch ?? '');
   }, [location]);

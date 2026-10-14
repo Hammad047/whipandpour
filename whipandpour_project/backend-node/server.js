@@ -39,7 +39,7 @@ const {
 } = require("./routers/orders");
 const {
   adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete, adminProductsSetActive,
-  adminCollectionsCreate,
+  adminCollectionsList, adminCollectionsCreate, adminCollectionsUpdate, adminCollectionsDelete,
   adminInventoryRestock, adminInventorySetStock,
   adminCustomersList,
   adminOrdersList, adminOrdersUpdateStatus, adminOrdersMarkAdvancePaid,
@@ -319,7 +319,19 @@ async function dispatchProcedure(procedure, inputData, isMutation, req, res) {
       return adminProductsDelete(Number(inp.id));
     }
 
+    if (procedure === "admin.collections.list") return adminCollectionsList();
     if (procedure === "admin.collections.create") return adminCollectionsCreate(inp);
+
+    if (procedure === "admin.collections.update") {
+      if (!inp || typeof inp.slug !== "string") throw new TRPCError("slug is required", "BAD_REQUEST");
+      return adminCollectionsUpdate(inp.slug, inp.data || {});
+    }
+
+    if (procedure === "admin.collections.delete") {
+      if (!isMutation) throw new TRPCError("Delete must be a mutation", "METHOD_NOT_SUPPORTED");
+      if (!inp || typeof inp.slug !== "string") throw new TRPCError("slug is required", "BAD_REQUEST");
+      return adminCollectionsDelete(inp.slug, inp.moveTo);
+    }
 
     if (procedure === "admin.products.setActive") {
       if (!isMutation) throw new TRPCError("setActive must be a mutation", "METHOD_NOT_SUPPORTED");

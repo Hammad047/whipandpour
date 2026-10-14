@@ -35,6 +35,8 @@ import AdminReviews from "./pages/AdminReviews";
 import AdminInventory from "./pages/AdminInventory";
 import AdminPayments from "./pages/AdminPayments";
 import { useCollections } from "./hooks/useCollections";
+import Collection from "./pages/Collection";
+import AdminCollections from "./pages/AdminCollections";
 
 function Router() {
   const [location] = useLocation();
@@ -51,6 +53,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/shop" component={Shop} />
         <Route path="/product/:slug" component={ProductDetail} />
+        <Route path="/collection/:slug" component={Collection} />
         <Route path="/cart" component={Cart} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/order/success" component={OrderSuccess} />
@@ -63,6 +66,7 @@ function Router() {
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products" component={AdminProducts} />
+        <Route path="/admin/collections" component={AdminCollections} />
         <Route path="/admin/content" component={AdminContent} />
         <Route path="/admin/orders" component={AdminOrders} />
         <Route path="/admin/customers" component={AdminCustomers} />

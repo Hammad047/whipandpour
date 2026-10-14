@@ -3,6 +3,7 @@ import { ChevronRight, Flame, Truck, Award, Heart, Gift, PenLine, Package, EyeOf
 import { trpc } from '@/lib/trpc';
 import { formatPrice, toNumber } from '@/const';
 import InfiniteProductScroller from '@/components/InfiniteProductScroller';
+import { useActiveCollections } from '@/hooks/useCollections';
 import { useSEO } from '@/hooks/useSEO';
 
 // Shown immediately (before the content.homepage query resolves) and as the
@@ -24,6 +25,9 @@ const DEFAULT_CONTENT = {
   badgeLabel: 'Natural Soy Wax',
 };
 
+// Built-in artwork for the original collections, used until a cover is uploaded.
+const PLACEHOLDER_COLLECTIONS = ['dessert-jar', 'cupcake', 'iced-latte', 'cheesecake', 'wax-melts'];
+
 export default function Home() {
   const [, navigate] = useLocation();
 
@@ -40,6 +44,7 @@ export default function Home() {
     retry: false,
   });
 
+  const activeCollections = useActiveCollections();
   const { data: products = [] } = trpc.products.list.useQuery({
     limit: 200,
     offset: 0,
@@ -119,6 +124,42 @@ export default function Home() {
           speed={55}
         />
       </div>
+
+      {activeCollections.length > 0 && (
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-4 md:px-8 max-w-7xl">
+            <div className="text-center mb-14">
+              <p className="text-xs font-bold tracking-[0.3em] text-[#C9A84C] uppercase mb-3">— Collections —</p>
+              <h2 className="text-4xl md:text-5xl font-bold text-[#2C2C2C]" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Shop by Collection
+              </h2>
+              <div className="h-0.5 w-20 bg-gradient-to-r from-[#C9A84C] to-[#D4A5A5] rounded mx-auto mt-5" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {activeCollections.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => navigate(`/collection/${c.value}`)}
+                  className="group relative h-72 rounded-2xl overflow-hidden text-left bg-[#2C2C2C] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]"
+                >
+                  {c.coverImage || PLACEHOLDER_COLLECTIONS.includes(c.value) ? (
+                    <img
+                      src={c.coverImage || `/images/products/${c.value}-1.svg`}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
+                    />
+                  ) : null}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                    <h3 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>{c.label}</h3>
+                    {c.description ? <p className="text-sm text-white/80 line-clamp-2 mt-1">{c.description}</p> : null}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Best Sellers Section */}
       <section className="py-20 bg-white">

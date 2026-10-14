@@ -34,6 +34,7 @@ export default function AdminContent() {
   const [, navigate] = useLocation();
   const [form, setForm] = useState<Record<string, string>>({});
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [brokenFields, setBrokenFields] = useState<string[]>([]);
 
   const utils = trpc.useUtils();
   const { data: content, isLoading } = trpc.content.homepage.useQuery();
@@ -156,10 +157,13 @@ export default function AdminContent() {
                         src={form[field.key]}
                         alt=""
                         className="w-12 h-12 rounded-lg object-cover border border-[#E8DDD0]"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
+                        onError={() =>
+                          setBrokenFields((list) => (list.includes(field.key) ? list : [...list, field.key]))
+                        }
                       />
+                    )}
+                    {form[field.key] && brokenFields.includes(field.key) && (
+                      <p className="text-xs text-red-600">Failed to load. Upload it again.</p>
                     )}
                     {form[field.key] && (
                       <button

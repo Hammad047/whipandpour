@@ -5,16 +5,20 @@ const iconFor = (value: string) =>
   CATEGORIES.find((c) => c.value === value)?.icon ?? '✨';
 
 /**
- * Admin-managed collections from the API. Mirrors the list into the shared
- * registry that categoryLabel() reads, so labels render correctly everywhere,
- * not only in components that call this hook.
+ * Every collection from the API, active and inactive. Mirrors the list into the
+ * registry that categoryLabel() reads, so labels render correctly everywhere.
  */
 export function useCollections(): CollectionOption[] {
   const { data } = trpc.products.categories.useQuery(undefined, { staleTime: 60_000 });
   if (data) {
     setCollectionOptions(
-      (data as { value: string; label: string }[]).map((c) => ({ ...c, icon: iconFor(c.value) }))
+      (data as CollectionOption[]).map((c) => ({ ...c, icon: iconFor(c.value) }))
     );
   }
   return getCollectionOptions();
+}
+
+/** Collections the storefront should show. */
+export function useActiveCollections(): CollectionOption[] {
+  return useCollections().filter((c) => c.isActive !== false);
 }

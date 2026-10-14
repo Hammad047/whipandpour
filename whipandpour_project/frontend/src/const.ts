@@ -16,7 +16,15 @@ export const CATEGORIES = [
 
 export type CategoryValue = (typeof CATEGORIES)[number]["value"];
 
-export type CollectionOption = { value: string; label: string; icon?: string; short?: string };
+export type CollectionOption = {
+  value: string;
+  label: string;
+  icon?: string;
+  short?: string;
+  description?: string | null;
+  coverImage?: string | null;
+  isActive?: boolean;
+};
 
 // Collections are admin-managed. Until the API responds, the built-in list
 // stands in; useCollections() replaces it with the live list.
