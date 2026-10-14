@@ -6,15 +6,11 @@
 
 const crypto = require("crypto");
 const cookie = require("cookie");
-const { User } = require("./db");
+const { User, AuthSession, Op } = require("./db");
 
 const COOKIE_NAME = "app_session_id";
 const UNAUTHED_ERR_MSG = "Please login (10001)";
 const NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-
-// In-memory session store: sessionId -> userId
-// NOTE: this is process-local. Restarting the server logs everyone out.
-const _sessions = new Map();
 
 // ─── Password hashing ───────────────────────────────────────────────────────
 // PBKDF2-HMAC-SHA256 — Node's crypto covers this natively, no extra dependency.
@@ -49,14 +45,16 @@ function verifyPassword(password, stored) {
 
 // ─── Sessions ───────────────────────────────────────────────────────────────
 
-function createSession(userId) {
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+async function createSession(userId) {
   const sessionId = crypto.randomBytes(32).toString("base64url");
-  _sessions.set(sessionId, userId);
+  await AuthSession.create({ id: sessionId, userId, expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS) });
   return sessionId;
 }
 
-function destroySession(sessionId) {
-  _sessions.delete(sessionId);
+async function destroySession(sessionId) {
+  await AuthSession.destroy({ where: { id: sessionId } });
 }
 
 function getSessionIdFromRequest(req) {
@@ -64,14 +62,17 @@ function getSessionIdFromRequest(req) {
   return cookies[COOKIE_NAME] || null;
 }
 
-function getUserIdFromRequest(req) {
+async function getUserIdFromRequest(req) {
   const sessionId = getSessionIdFromRequest(req);
   if (!sessionId) return null;
-  return _sessions.has(sessionId) ? _sessions.get(sessionId) : null;
+  const session = await AuthSession.findOne({
+    where: { id: sessionId, expiresAt: { [Op.gt]: new Date() } },
+  });
+  return session ? session.userId : null;
 }
 
 async function getCurrentUser(req) {
-  const userId = getUserIdFromRequest(req);
+  const userId = await getUserIdFromRequest(req);
   if (userId == null) return null;
   return User.findByPk(userId);
 }

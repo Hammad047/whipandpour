@@ -8,7 +8,7 @@
  */
 
 const { Op } = require("sequelize");
-const { CATEGORY_VALUES, Order, OrderItem, Product, User, PromoCode, Review } = require("../db");
+const { Collection, Order, OrderItem, Product, User, PromoCode, Review } = require("../db");
 const { TRPCError } = require("../auth");
 const { serializeProduct } = require("./products");
 const { Decimal, q2, money } = require("../money");
@@ -58,12 +58,10 @@ function requireInt(data, field, { minimum = 0, maximum = 1_000_000 } = {}) {
   return value;
 }
 
-function requireCategory(data) {
-  const category = data.category;
-  if (!CATEGORY_VALUES.includes(category)) {
-    throw new TRPCError(`category must be one of: ${CATEGORY_VALUES.join(", ")}`, "BAD_REQUEST");
-  }
-  return category;
+async function requireCollection(value, field) {
+  const collection = typeof value === "string" ? await Collection.findByPk(value) : null;
+  if (!collection) throw new TRPCError(`${field} must be an existing collection`, "BAD_REQUEST");
+  return collection.slug;
 }
 
 function stringList(data, field, { maxItems = 20, maxLen = 120 } = {}) {
@@ -102,7 +100,7 @@ async function validateProductPayload(data, { productId } = {}) {
 
   const name = requireStr(data, "name", { maxLen: 255 });
   const description = requireStr(data, "description", { maxLen: 5000 });
-  const category = requireCategory(data);
+  const category = await requireCollection(data.category, "category");
   // `price` is the 220ml price; `price300` the 300ml price — every product
   // is sold in exactly these two sizes (see buildTwoSizeOptions()).
   const price = requirePrice(data, "price");
@@ -227,6 +225,24 @@ async function adminProductsDelete(productId) {
 
   await product.destroy();
   return { id: productId, deleted: true, deactivated: false, message: "Product deleted" };
+}
+
+function slugifyCollection(label) {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
+}
+
+async function adminCollectionsCreate(data) {
+  if (!data || typeof data !== "object") throw new TRPCError("Collection data is required", "BAD_REQUEST");
+  const label = requireStr(data, "label", { maxLen: 100 }).trim();
+  const slug = slugifyCollection(label);
+  if (!slug) throw new TRPCError("Collection name must contain a letter or number", "BAD_REQUEST");
+
+  const existing = await Collection.findByPk(slug);
+  if (existing) return { value: existing.slug, label: existing.label };
+
+  const last = await Collection.max("sortOrder");
+  const collection = await Collection.create({ slug, label, sortOrder: (last || 0) + 1 });
+  return { value: collection.slug, label: collection.label };
 }
 
 async function adminProductsSetActive(productId, isActive) {
@@ -473,9 +489,7 @@ async function validatePromoPayload(data, { promoId } = {}) {
   }
 
   const category = data.applicableCategory || "all";
-  if (category !== "all" && !CATEGORY_VALUES.includes(category)) {
-    throw new TRPCError(`applicableCategory must be 'all' or one of: ${CATEGORY_VALUES.join(", ")}`, "BAD_REQUEST");
-  }
+  if (category !== "all") await requireCollection(category, "applicableCategory");
 
   let minOrder;
   try {
@@ -759,7 +773,7 @@ async function adminPaymentsList() {
 }
 
 module.exports = {
-  adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete, adminProductsSetActive,
+  adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete, adminProductsSetActive, adminCollectionsCreate,
   adminInventoryRestock, adminInventorySetStock,
   adminCustomersList,
   adminOrdersList, adminOrdersUpdateStatus, adminOrdersMarkAdvancePaid,

@@ -5,7 +5,7 @@
  */
 
 const { Op } = require("sequelize");
-const { Product, CATEGORIES } = require("../db");
+const { Product, Collection } = require("../db");
 const { money } = require("../money");
 
 function serializeProduct(p) {
@@ -65,9 +65,10 @@ async function productsList(opts = {}) {
   return results.map(serializeProduct);
 }
 
-function productsCategories() {
-  // Category slugs and labels, so the frontend never hardcodes the list.
-  return Object.entries(CATEGORIES).map(([value, label]) => ({ value, label }));
+async function productsCategories() {
+  // Collections are admin-managed, so the frontend never hardcodes the list.
+  const rows = await Collection.findAll({ order: [["sortOrder", "ASC"], ["label", "ASC"]] });
+  return rows.map((c) => ({ value: c.slug, label: c.label }));
 }
 
 async function productsFeatured(limit = 12) {

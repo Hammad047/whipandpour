@@ -4,7 +4,8 @@ import { Plus, Edit2, Trash2, X, Tag, Loader2 } from 'lucide-react';
 import AdminLayout from '@/components/AdminLayout';
 import { useAdmin } from '@/contexts/AdminContext';
 import { trpc } from '@/lib/trpc';
-import { CATEGORIES, formatPrice, toNumber } from '@/const';
+import { formatPrice, toNumber } from '@/const';
+import { useCollections } from '@/hooks/useCollections';
 import { toast } from 'sonner';
 
 /**
@@ -32,6 +33,7 @@ const emptyForm = {
 };
 
 export default function AdminPromos() {
+  const collections = useCollections();
   const { isAdminAuthenticated, isCheckingSession } = useAdmin();
   const [, navigate] = useLocation();
   const [showForm, setShowForm] = useState(false);
@@ -182,7 +184,7 @@ export default function AdminPromos() {
                   <p className="text-xs text-[#7A7066]">
                     {promo.applicableCategory === 'all'
                       ? 'All products'
-                      : CATEGORIES.find((c) => c.value === promo.applicableCategory)?.label ?? promo.applicableCategory}
+                      : collections.find((c) => c.value === promo.applicableCategory)?.label ?? promo.applicableCategory}
                     {toNumber(promo.minOrderAmount) > 0 && ` · min ${formatPrice(promo.minOrderAmount)}`}
                   </p>
                 </div>
@@ -287,7 +289,7 @@ export default function AdminPromos() {
                 <select value={formData.applicableCategory} onChange={e => setFormData({ ...formData, applicableCategory: e.target.value })}
                   className="w-full px-3 py-2.5 border border-[#E8DDD0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]">
                   <option value="all">All products</option>
-                  {CATEGORIES.map((c) => (<option key={c.value} value={c.value}>{c.label}</option>))}
+                  {collections.map((c) => (<option key={c.value} value={c.value}>{c.label}</option>))}
                 </select>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">

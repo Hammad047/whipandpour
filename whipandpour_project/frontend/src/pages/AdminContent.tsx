@@ -5,6 +5,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { useAdmin } from '@/contexts/AdminContext';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import { uploadImage } from '@/lib/uploadImage';
 
 /**
  * Admin → Site Content
@@ -14,10 +15,6 @@ import { toast } from 'sonner';
  * Scoped to this one section deliberately — a full page-by-page content
  * editor is a much larger feature than what was actually broken.
  */
-
-// Empty string, not undefined — `${API_URL}/api/...` must resolve to a
-// same-origin relative path when unset, not the literal string "undefined".
-const API_URL = import.meta.env.VITE_API_URL || '';
 
 const FIELDS: { key: string; label: string; type: 'text' | 'textarea' | 'image' }[] = [
   { key: 'heroImage', label: 'Hero background image (full-screen, top of page)', type: 'image' },
@@ -70,29 +67,10 @@ export default function AdminContent() {
   }
 
   const handleImageUpload = async (field: string, file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be smaller than 5MB');
-      return;
-    }
-
     setUploadingField(field);
     try {
-      const body = new FormData();
-      body.append('image', file);
-      const response = await fetch(`${API_URL}/api/admin/upload/image`, {
-        method: 'POST',
-        credentials: 'include',
-        body,
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result?.success || !result?.url) {
-        throw new Error(result?.message || 'Image upload failed');
-      }
-      setForm((prev) => ({ ...prev, [field]: result.url }));
+      const url = await uploadImage(file);
+      setForm((prev) => ({ ...prev, [field]: url }));
       toast.success('Image uploaded — click Save to publish it');
     } catch (error: any) {
       toast.error(error?.message || 'Image upload failed');
@@ -147,7 +125,7 @@ export default function AdminContent() {
                   <div className="flex gap-2 items-center">
                     <input
                       type="url"
-                      placeholder="https://... (image URL)"
+                      placeholder="Or paste an image link (https://...)"
                       value={form[field.key] ?? ''}
                       onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
                       className="flex-1 px-3 py-2.5 border border-[#E8DDD0] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
@@ -160,7 +138,7 @@ export default function AdminContent() {
                       }`}
                     >
                       <Upload size={14} />
-                      {uploadingField === field.key ? 'Uploading...' : 'Upload'}
+                      {uploadingField === field.key ? 'Uploading...' : 'Upload image'}
                       <input
                         type="file"
                         accept="image/*"

@@ -34,9 +34,11 @@ import AdminPromos from "./pages/AdminPromos";
 import AdminReviews from "./pages/AdminReviews";
 import AdminInventory from "./pages/AdminInventory";
 import AdminPayments from "./pages/AdminPayments";
+import { useCollections } from "./hooks/useCollections";
 
 function Router() {
   const [location] = useLocation();
+  useCollections();
   const isAdminPage = location.startsWith('/admin');
 
   return (

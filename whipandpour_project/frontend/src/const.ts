@@ -16,13 +16,21 @@ export const CATEGORIES = [
 
 export type CategoryValue = (typeof CATEGORIES)[number]["value"];
 
-export const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.value, c.label])
-);
+export type CollectionOption = { value: string; label: string; icon?: string; short?: string };
 
-/** Human label for a category slug, falling back to the raw value. */
+// Collections are admin-managed. Until the API responds, the built-in list
+// stands in; useCollections() replaces it with the live list.
+let collectionOptions: CollectionOption[] = [...CATEGORIES];
+
+export const setCollectionOptions = (rows: CollectionOption[]) => {
+  collectionOptions = rows;
+};
+
+export const getCollectionOptions = (): CollectionOption[] => collectionOptions;
+
+/** Human label for a collection slug, falling back to the raw value. */
 export const categoryLabel = (value?: string | null): string =>
-  (value && CATEGORY_LABELS[value]) || value || "";
+  (value && collectionOptions.find((c) => c.value === value)?.label) || value || "";
 
 /**
  * The API sends money and ratings as strings ("2800.00"). Parse defensively —

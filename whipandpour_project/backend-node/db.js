@@ -53,7 +53,6 @@ const CATEGORIES = {
   cheesecake: "Cheesecake Candles",
   "wax-melts": "Wax Melts",
 };
-const CATEGORY_VALUES = Object.keys(CATEGORIES);
 
 // ─── Models ─────────────────────────────────────────────────────────────────
 
@@ -81,7 +80,9 @@ const Product = sequelize.define("Product", {
   name: { type: DataTypes.STRING(255), allowNull: false },
   slug: { type: DataTypes.STRING(255), allowNull: false, unique: true },
   description: { type: DataTypes.TEXT, allowNull: false },
-  category: { type: DataTypes.ENUM(...CATEGORY_VALUES), allowNull: false },
+  // A string, not an ENUM: new collections are created at runtime, and a MySQL
+  // ENUM would need an ALTER TABLE for every one. Validated against Collection.
+  category: { type: DataTypes.STRING(50), allowNull: false },
   price: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
   stock: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   images: { type: DataTypes.TEXT, allowNull: false, defaultValue: "[]" }, // JSON array of URLs
@@ -213,6 +214,28 @@ const SiteSetting = sequelize.define("SiteSetting", {
   updatedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
 }, { tableName: "siteSettings", timestamps: false });
 
+const Collection = sequelize.define("Collection", {
+  slug: { type: DataTypes.STRING(50), primaryKey: true },
+  label: { type: DataTypes.STRING(100), allowNull: false },
+  sortOrder: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+}, { tableName: "collections", timestamps: false });
+
+// Sessions were an in-memory Map, so every server restart logged everyone out.
+const AuthSession = sequelize.define("AuthSession", {
+  id: { type: DataTypes.STRING(64), primaryKey: true },
+  userId: { type: DataTypes.INTEGER, allowNull: false },
+  expiresAt: { type: DataTypes.DATE, allowNull: false },
+}, { tableName: "authSessions", timestamps: false });
+
+// Uploaded images are kept in the database, not on the server's disk, because
+// the disk is wiped on every Render redeploy or restart.
+const UploadedImage = sequelize.define("UploadedImage", {
+  name: { type: DataTypes.STRING(255), primaryKey: true },
+  mimeType: { type: DataTypes.STRING(100), allowNull: false },
+  data: { type: DataTypes.BLOB("long"), allowNull: false },
+  createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+}, { tableName: "uploadedImages", timestamps: false });
+
 const PromoCode = sequelize.define("PromoCode", {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   code: { type: DataTypes.STRING(50), allowNull: false, unique: true },
@@ -223,7 +246,7 @@ const PromoCode = sequelize.define("PromoCode", {
   expiryDate: { type: DataTypes.DATE, allowNull: true },
   isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
   applicableCategory: {
-    type: DataTypes.ENUM("all", ...CATEGORY_VALUES),
+    type: DataTypes.STRING(50),
     defaultValue: "all",
   },
   minOrderAmount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
@@ -462,6 +485,19 @@ async function initDb() {
   // migration the Python version needed for its already-live SQLite files.
   await sequelize.sync();
 
+  // MySQL created products.category as an ENUM before collections were dynamic.
+  if (sequelize.getDialect() === "mysql") {
+    const qi = sequelize.getQueryInterface();
+    await qi.changeColumn(Product.getTableName(), "category", { type: DataTypes.STRING(50), allowNull: false });
+    await qi.changeColumn(PromoCode.getTableName(), "applicableCategory", { type: DataTypes.STRING(50), defaultValue: "all" });
+  }
+
+  let order = 0;
+  for (const [slug, label] of Object.entries(CATEGORIES)) {
+    await Collection.findOrCreate({ where: { slug }, defaults: { label, sortOrder: order } });
+    order += 1;
+  }
+
   if ((await Product.count()) === 0) {
     for (const p of SEED_PRODUCTS) {
       await Product.create({ ...p, sizeOptions: sizeOptionsFor(p.price) });
@@ -485,7 +521,8 @@ async function initDb() {
 
 module.exports = {
   sequelize, Op,
-  CATEGORIES, CATEGORY_VALUES,
+  CATEGORIES,
   User, Product, Order, OrderItem, Cart, Wishlist, Review, PromoCode, SiteSetting,
+  Collection, AuthSession, UploadedImage,
   initDb, sizeOptionsFor,
 };

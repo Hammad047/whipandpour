@@ -21,7 +21,7 @@ const express = require("express");
 const cors = require("cors");
 const { fn, col, where: sequelizeWhere } = require("sequelize");
 
-const { initDb, User, Product } = require("./db");
+const { initDb, User, Product, UploadedImage } = require("./db");
 const {
   TRPCError, UNAUTHED_ERR_MSG, NOT_ADMIN_ERR_MSG,
   verifyPassword, getUserIdFromRequest,
@@ -39,6 +39,7 @@ const {
 } = require("./routers/orders");
 const {
   adminProductsList, adminProductsCreate, adminProductsUpdate, adminProductsDelete, adminProductsSetActive,
+  adminCollectionsCreate,
   adminInventoryRestock, adminInventorySetStock,
   adminCustomersList,
   adminOrdersList, adminOrdersUpdateStatus, adminOrdersMarkAdvancePaid,
@@ -58,6 +59,20 @@ app.use(express.json());
 // Serve uploaded product images.
 const uploadsPath = path.join(__dirname, "uploads");
 app.use("/uploads", express.static(uploadsPath));
+// Images uploaded since the move to database storage. Checked after the static
+// folder so files already on disk keep working.
+app.get("/uploads/products/:name", async (req, res, next) => {
+  try {
+    const image = await UploadedImage.findByPk(req.params.name);
+    if (!image) return next();
+    res.set("Content-Type", image.mimeType);
+    res.set("Cache-Control", "public, max-age=31536000, immutable");
+    res.set("X-Content-Type-Options", "nosniff");
+    res.send(image.data);
+  } catch (err) {
+    next(err);
+  }
+});
 
 
 // Explicit origins, not "*" — this API sends a session cookie (credentials:
@@ -111,7 +126,7 @@ function trpcErr(message, code = "INTERNAL_SERVER_ERROR", httpStatus = 500) {
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
 async function getUser(req) {
-  const userId = getUserIdFromRequest(req);
+  const userId = await getUserIdFromRequest(req);
   if (userId == null) return null;
   return User.findByPk(userId);
 }
@@ -159,7 +174,7 @@ async function dispatchProcedure(procedure, inputData, isMutation, req, res) {
 
   if (procedure === "auth.logout") {
     const sessionId = getSessionIdFromRequest(req);
-    if (sessionId) destroySession(sessionId);
+    if (sessionId) await destroySession(sessionId);
     clearSessionCookie(res);
     return { success: true };
   }
@@ -303,6 +318,8 @@ async function dispatchProcedure(procedure, inputData, isMutation, req, res) {
       if (!inp || inp.id == null) throw new TRPCError("id is required", "BAD_REQUEST");
       return adminProductsDelete(Number(inp.id));
     }
+
+    if (procedure === "admin.collections.create") return adminCollectionsCreate(inp);
 
     if (procedure === "admin.products.setActive") {
       if (!isMutation) throw new TRPCError("setActive must be a mutation", "METHOD_NOT_SUPPORTED");
@@ -510,7 +527,7 @@ app.post("/api/auth/demo-login", async (req, res) => {
     user = await User.create({ openId, name, email, loginMethod: "demo", role: "user" });
   }
 
-  const sessionId = createSession(user.id);
+  const sessionId = await createSession(user.id);
   setSessionCookie(res, sessionId);
   res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 });
@@ -535,14 +552,14 @@ app.post("/api/auth/admin-login", async (req, res) => {
   user.lastSignedIn = new Date();
   await user.save();
 
-  const sessionId = createSession(user.id);
+  const sessionId = await createSession(user.id);
   setSessionCookie(res, sessionId);
   res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 });
 
-app.get("/api/auth/demo-logout", (req, res) => {
+app.get("/api/auth/demo-logout", async (req, res) => {
   const sessionId = getSessionIdFromRequest(req);
-  if (sessionId) destroySession(sessionId);
+  if (sessionId) await destroySession(sessionId);
   clearSessionCookie(res);
   res.json({ success: true });
 });

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { CATEGORIES } from '@/const';
+import { useCollections } from '@/hooks/useCollections';
 
 const TOP_BAR_MESSAGES = [
   'FREE DELIVERY ON ORDERS OVER PKR 4,000  |  HANDCRAFTED WITH LOVE 🕯️',
@@ -14,6 +14,7 @@ const TOP_BAR_MESSAGES = [
 ];
 
 export default function Navbar() {
+  const collections = useCollections();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bannerIndex, setBannerIndex] = useState(0);
 
@@ -125,7 +126,7 @@ export default function Navbar() {
                   </button>
                   {collectionOpen && (
                     <div className="absolute top-full left-0 mt-2 w-60 bg-white rounded-xl shadow-xl border border-[#E8DDD0] overflow-hidden z-50">
-                      {CATEGORIES.map((cat) => (
+                      {collections.map((cat) => (
                         <button
                           key={cat.value}
                           onMouseDown={(e) => e.preventDefault()}
@@ -307,7 +308,7 @@ export default function Navbar() {
               </button>
               {collectionOpen && (
                 <div className="ml-4 mt-1 space-y-1">
-                  {CATEGORIES.map((cat) => (
+                  {collections.map((cat) => (
                     <button
                       key={cat.value}
                       onClick={() => goTo(`/shop?category=${cat.value}`)}

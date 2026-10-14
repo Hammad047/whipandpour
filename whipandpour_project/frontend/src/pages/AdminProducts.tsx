@@ -5,6 +5,10 @@ import AdminLayout from '@/components/AdminLayout';
 import { useAdmin } from '@/contexts/AdminContext';
 import { trpc } from '@/lib/trpc';
 import { CATEGORIES, categoryLabel, formatPrice, toNumber } from '@/const';
+import { useCollections } from '@/hooks/useCollections';
+import { uploadImage } from '@/lib/uploadImage';
+
+const MAX_IMAGES = 5;
 import { toast } from 'sonner';
 
 // Empty string, not undefined — `${API_URL}/api/...` must resolve to a
@@ -38,7 +42,7 @@ const emptyForm = {
   isFeatured: false,
   isBestseller: false,
   isLimitedEdition: false,
-  images: ['', '', '', '', ''],
+  images: [] as string[],
 };
 
 export default function AdminProducts() {
@@ -48,7 +52,11 @@ export default function AdminProducts() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState(emptyForm);
-  const [uploadingImage, setUploadingImage] = useState<number | null>(null);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [imageLink, setImageLink] = useState('');
+  const [addingCollection, setAddingCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const collections = useCollections();
 
   const utils = trpc.useUtils();
   const { data: products = [], isLoading, isError, error } = trpc.admin.products.list.useQuery(
@@ -103,6 +111,17 @@ export default function AdminProducts() {
     onError: (e: any) => toast.error(e?.message ?? 'Could not unhide the product'),
   });
 
+  const createCollection = trpc.admin.collections.create.useMutation({
+    onSuccess: (collection: any) => {
+      utils.products.categories.invalidate();
+      setFormData((current) => ({ ...current, category: collection.value }));
+      setAddingCollection(false);
+      setNewCollectionName('');
+      toast.success(`Collection “${collection.label}” created`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Could not create the collection'),
+  });
+
   const isSaving = createProduct.isPending || updateProduct.isPending;
 
   if (isCheckingSession) {
@@ -153,64 +172,60 @@ export default function AdminProducts() {
       isFeatured: !!product.isFeatured,
       isBestseller: !!product.isBestseller,
       isLimitedEdition: !!product.isLimitedEdition,
-      images: [...(product.images ?? []), '', '', '', '', ''].slice(0, 5),
+      images: [...(product.images ?? [])].slice(0, MAX_IMAGES),
     });
     setShowForm(true);
   };
 
 
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-    index: number
-  ) => {
-    const file = event.target.files?.[0];
+  const handleUploadFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    if (files.length === 0) return;
 
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      event.target.value = '';
+    const room = MAX_IMAGES - formData.images.length;
+    if (room <= 0) {
+      toast.error(`You can add up to ${MAX_IMAGES} images`);
       return;
     }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be smaller than 5MB');
-      event.target.value = '';
-      return;
+    if (files.length > room) {
+      toast.error(`Only ${room} more image${room === 1 ? '' : 's'} fit — the rest were skipped`);
     }
 
-    setUploadingImage(index);
-
+    setUploadingImages(true);
     try {
-      const body = new FormData();
-      body.append('image', file);
-
-      const response = await fetch(`${API_URL}/api/admin/upload/image`, {
-        method: 'POST',
-        credentials: 'include',
-        body,
-      });
-
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok || !result?.success || !result?.url) {
-        throw new Error(result?.message || 'Image upload failed');
+      for (const file of files.slice(0, room)) {
+        const url = await uploadImage(file);
+        setFormData((current) => ({ ...current, images: [...current.images, url].slice(0, MAX_IMAGES) }));
       }
-
-      setFormData((current) => {
-        const images = [...current.images];
-        images[index] = result.url;
-        return { ...current, images };
-      });
-
-      toast.success('Image uploaded');
+      toast.success('Images uploaded');
     } catch (error: any) {
       toast.error(error?.message || 'Image upload failed');
     } finally {
-      setUploadingImage(null);
-      event.target.value = '';
+      setUploadingImages(false);
     }
   };
+
+  const addImageLink = () => {
+    const url = imageLink.trim();
+    if (!url) return;
+    if (formData.images.length >= MAX_IMAGES) {
+      toast.error(`You can add up to ${MAX_IMAGES} images`);
+      return;
+    }
+    setFormData((current) => ({ ...current, images: [...current.images, url] }));
+    setImageLink('');
+  };
+
+  const setMainImage = (index: number) =>
+    setFormData((current) => {
+      const images = [...current.images];
+      const [picked] = images.splice(index, 1);
+      return { ...current, images: [picked, ...images] };
+    });
+
+  const removeImage = (index: number) =>
+    setFormData((current) => ({ ...current, images: current.images.filter((_, i) => i !== index) }));
 
   const handleSave = () => {
     // Frontend validation for fast feedback; the backend validates independently.
@@ -390,12 +405,49 @@ export default function AdminProducts() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#2C2C2C] mb-1">Category *</label>
-                  <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  <select
+                    value={addingCollection ? '__new__' : formData.category}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setAddingCollection(true);
+                      } else {
+                        setAddingCollection(false);
+                        setFormData({ ...formData, category: e.target.value });
+                      }
+                    }}
                     className="w-full px-3 py-2.5 border border-[#E8DDD0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]">
-                    {CATEGORIES.map((cat) => (
+                    {collections.map((cat) => (
                       <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>
                     ))}
+                    <option value="__new__">+ New collection</option>
                   </select>
+                  {addingCollection && (
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Collection name, e.g. Summer Glow"
+                        value={newCollectionName}
+                        onChange={(e) => setNewCollectionName(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-[#E8DDD0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => createCollection.mutate({ label: newCollectionName })}
+                        disabled={!newCollectionName.trim() || createCollection.isPending}
+                        className="px-3 py-2 text-xs font-semibold bg-[#C9A84C] text-[#2C2C2C] rounded-xl hover:bg-[#D4A5A5] transition-colors disabled:opacity-40"
+                      >
+                        {createCollection.isPending ? 'Creating…' : 'Create'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setAddingCollection(false); setNewCollectionName(''); }}
+                        className="px-3 py-2 text-xs font-semibold text-[#7A7066] border border-[#E8DDD0] rounded-xl"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-[#2C2C2C] mb-1">220ml price (PKR) *</label>
@@ -445,78 +497,85 @@ export default function AdminProducts() {
                     ))}
                   </div>
                 </div>
-                {/* 5 Product Images */}
+                {/* Product Images */}
                 <div className="col-span-2">
-                  <label className="block text-sm font-semibold text-[#2C2C2C] mb-1">
-                    Product Images (up to 5)
-                  </label>
+                  <div className="flex items-center justify-between gap-3 mb-1">
+                    <label className="block text-sm font-semibold text-[#2C2C2C]">
+                      Product Images (up to {MAX_IMAGES})
+                    </label>
+                    <label
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap ${
+                        uploadingImages || formData.images.length >= MAX_IMAGES
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-[#2C2C2C] text-white hover:bg-[#444] cursor-pointer'
+                      }`}
+                    >
+                      <Upload size={14} />
+                      {uploadingImages ? 'Uploading...' : 'Upload images'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        disabled={uploadingImages || formData.images.length >= MAX_IMAGES}
+                        onChange={handleUploadFiles}
+                      />
+                    </label>
+                  </div>
                   <p className="text-xs text-[#7A7066] mb-3">
-                    Upload images directly, or paste an image URL.
+                    Choose one or more images from your device. The first image is the main one shown on cards.
                   </p>
 
-                  <div className="space-y-2">
-                    {formData.images.map((img, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
-                        <span className="text-xs text-[#7A7066] w-14 flex-shrink-0">
-                          Image {idx + 1}{idx === 0 ? ' *' : ''}
-                        </span>
+                  {formData.images.length > 0 ? (
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                      {formData.images.map((img, idx) => (
+                        <div key={`${idx}-${img}`}>
+                          <div className="relative">
+                            <img
+                              src={img}
+                              alt=""
+                              className="w-full aspect-square rounded-xl object-cover border border-[#E8DDD0] bg-[#FAF7F2]"
+                              onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
+                            />
+                            {idx === 0 && (
+                              <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-[#C9A84C] text-[#2C2C2C] text-[10px] font-bold rounded">
+                                Main
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex justify-between gap-1 mt-1">
+                            {idx > 0 ? (
+                              <button type="button" onClick={() => setMainImage(idx)} className="text-[11px] font-semibold text-[#C9A84C] hover:underline">
+                                Make main
+                              </button>
+                            ) : <span />}
+                            <button type="button" onClick={() => removeImage(idx)} className="text-[11px] font-semibold text-[#D4A5A5] hover:text-red-600">
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#7A7066] italic">No images yet. The category placeholder will be used.</p>
+                  )}
 
-                        <input
-                          type="url"
-                          placeholder="https://... (image URL)"
-                          value={img}
-                          onChange={(e) => {
-                            const imgs = [...formData.images];
-                            imgs[idx] = e.target.value;
-                            setFormData({ ...formData, images: imgs });
-                          }}
-                          className="flex-1 px-3 py-2 border border-[#E8DDD0] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
-                        />
-
-                        <label
-                          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap ${
-                            uploadingImage === idx
-                              ? 'bg-gray-100 text-gray-400 cursor-wait'
-                              : 'bg-[#2C2C2C] text-white hover:bg-[#444] cursor-pointer'
-                          }`}
-                        >
-                          <Upload size={14} />
-                          {uploadingImage === idx ? 'Uploading...' : 'Upload'}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            disabled={uploadingImage === idx}
-                            onChange={(e) => handleImageUpload(e, idx)}
-                          />
-                        </label>
-
-                        {img && (
-                          <img
-                            src={img}
-                            alt=""
-                            className="w-10 h-10 rounded-lg object-cover border border-[#E8DDD0]"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        )}
-
-                        {img && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const imgs = [...formData.images];
-                              imgs[idx] = '';
-                              setFormData({ ...formData, images: imgs });
-                            }}
-                            className="text-xs font-semibold text-[#D4A5A5] hover:text-red-600 transition-colors whitespace-nowrap"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex gap-2 mt-4">
+                    <input
+                      type="url"
+                      placeholder="Or paste an image link (https://...)"
+                      value={imageLink}
+                      onChange={(e) => setImageLink(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-[#E8DDD0] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+                    />
+                    <button
+                      type="button"
+                      onClick={addImageLink}
+                      disabled={!imageLink.trim() || formData.images.length >= MAX_IMAGES}
+                      className="px-3 py-2 text-xs font-semibold bg-[#E8DDD0] text-[#2C2C2C] rounded-xl hover:bg-[#D4A5A5] transition-colors disabled:opacity-40"
+                    >
+                      Add link
+                    </button>
                   </div>
                 </div>
               </div>
