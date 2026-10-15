@@ -13,6 +13,7 @@ import { trpc } from '@/lib/trpc';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { categoryLabel, compareAtPrice, DISPLAY_DISCOUNT_PERCENT, formatPrice, toNumber } from '@/const';
+import { ProductDescription, plainDescription } from '@/lib/productDescription';
 import { useSEO, useJsonLd } from '@/hooks/useSEO';
 
 export default function ProductDetail({ params }: { params: { slug: string } }) {
@@ -76,7 +77,7 @@ export default function ProductDetail({ params }: { params: { slug: string } }) 
   useSEO({
     title: product ? `${product.name} — ${categoryLabel(product.category)}` : 'Product',
     description: product
-      ? `${product.name}: ${String(product.description).slice(0, 155)}`
+      ? `${product.name}: ${plainDescription(String(product.description)).slice(0, 155)}`
       : 'Handcrafted dessert candle from Whip&Pour.',
     image: absoluteImage,
   });
@@ -88,7 +89,7 @@ export default function ProductDetail({ params }: { params: { slug: string } }) 
           '@context': 'https://schema.org',
           '@type': 'Product',
           name: product.name,
-          description: product.description,
+          description: plainDescription(String(product.description ?? '')),
           image: absoluteImage ? [absoluteImage] : undefined,
           sku: String(product.id),
           category: categoryLabel(product.category),
@@ -283,7 +284,9 @@ export default function ProductDetail({ params }: { params: { slug: string } }) 
             </div>
 
             {/* Description */}
-            <p className="text-lg text-[#666] mb-8 leading-relaxed whitespace-pre-line">{product.description}</p>
+            <div className="text-lg text-[#666] mb-8 leading-relaxed">
+              <ProductDescription text={String(product.description ?? '')} />
+            </div>
 
             {/* Scent Notes */}
             {scentNotes.length > 0 && (
