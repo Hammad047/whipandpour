@@ -23,6 +23,9 @@ export type CollectionOption = {
   short?: string;
   description?: string | null;
   coverImage?: string | null;
+  /** Resolved by the API: the admin's cover, else a photo from this
+   *  collection's own stock. Null when it has no active product with one. */
+  image?: string | null;
   isActive?: boolean;
 };
 

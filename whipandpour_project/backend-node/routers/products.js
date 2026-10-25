@@ -65,15 +65,55 @@ async function productsList(opts = {}) {
   return results.map(serializeProduct);
 }
 
+/** First usable URL out of a product's images column, or null. */
+function firstImageOf(product) {
+  let images = product.images;
+  if (typeof images === "string") {
+    try {
+      images = JSON.parse(images);
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(images)) return null;
+  const found = images.find((url) => typeof url === "string" && url.trim());
+  return found ? found.trim() : null;
+}
+
 async function productsCategories() {
   // Inactive collections are included so existing products still get a label;
   // the storefront filters them out of navigation and listings.
   const rows = await Collection.findAll({ order: [["sortOrder", "ASC"], ["label", "ASC"]] });
+
+  // A representative photo per collection, so the storefront can show real
+  // stock rather than a placeholder illustration. Drawn from active products
+  // only — an inactive line should not be the face of a collection — and
+  // newest-first, so the pick is deterministic and follows new arrivals.
+  //
+  // One query for every collection rather than one per collection: this is
+  // called on every page load through useCollections().
+  const products = await Product.findAll({
+    where: { isActive: true },
+    attributes: ["category", "images", "createdAt", "id"],
+    order: [["createdAt", "DESC"], ["id", "DESC"]],
+  });
+
+  const stockImage = new Map();
+  for (const product of products) {
+    if (stockImage.has(product.category)) continue;
+    const image = firstImageOf(product);
+    if (image) stockImage.set(product.category, image);
+  }
+
   return rows.map((c) => ({
     value: c.slug,
     label: c.label,
     description: c.description ?? null,
     coverImage: c.coverImage ?? null,
+    // What the storefront should actually render: an admin-chosen cover wins,
+    // otherwise a photo from the collection's own stock. Null only when the
+    // collection has no active product carrying an image.
+    image: c.coverImage ?? stockImage.get(c.slug) ?? null,
     isActive: Boolean(c.isActive),
   }));
 }

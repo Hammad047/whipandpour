@@ -136,15 +136,23 @@ export default function Home() {
               <div className="h-0.5 w-20 bg-gradient-to-r from-[#C9A84C] to-[#D4A5A5] rounded mx-auto mt-5" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeCollections.map((c) => (
+              {activeCollections.map((c) => {
+                // The API resolves `image` to the admin's cover or a photo from
+                // this collection's own stock. The drawn SVG is the last
+                // resort, for a collection with nothing in it yet.
+                const cardImage =
+                  c.image ||
+                  c.coverImage ||
+                  (PLACEHOLDER_COLLECTIONS.includes(c.value) ? `/images/products/${c.value}-1.svg` : null);
+                return (
                 <button
                   key={c.value}
                   onClick={() => navigate(`/collection/${c.value}`)}
                   className="group relative h-72 rounded-2xl overflow-hidden text-left bg-[#2C2C2C] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A84C]"
                 >
-                  {c.coverImage || PLACEHOLDER_COLLECTIONS.includes(c.value) ? (
+                  {cardImage ? (
                     <img
-                      src={c.coverImage || `/images/products/${c.value}-1.svg`}
+                      src={cardImage}
                       alt=""
                       className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
                     />
@@ -155,7 +163,8 @@ export default function Home() {
                     {c.description ? <p className="text-sm text-white/80 line-clamp-2 mt-1">{c.description}</p> : null}
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

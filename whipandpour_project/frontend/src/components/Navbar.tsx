@@ -7,6 +7,7 @@ import {
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useActiveCollections } from '@/hooks/useCollections';
+import CollectionThumb from '@/components/CollectionThumb';
 
 const TOP_BAR_MESSAGES = [
   'FREE DELIVERY ON ORDERS OVER PKR 4,000  |  HANDCRAFTED WITH LOVE 🕯️',
@@ -131,9 +132,10 @@ export default function Navbar() {
                           key={cat.value}
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => goTo(`/collection/${cat.value}`)}
-                          className="block w-full text-left px-5 py-3 text-sm text-[#2C2C2C] hover:bg-[#FAF7F2] hover:text-[#C9A84C] transition-colors font-medium"
+                          className="flex items-center gap-3 w-full text-left px-5 py-2.5 text-sm text-[#2C2C2C] hover:bg-[#FAF7F2] hover:text-[#C9A84C] transition-colors font-medium"
                         >
-                          {cat.icon} {cat.label}
+                          <CollectionThumb collection={cat} size={32} />
+                          <span className="truncate">{cat.label}</span>
                         </button>
                       ))}
                       <button
@@ -312,9 +314,10 @@ export default function Navbar() {
                     <button
                       key={cat.value}
                       onClick={() => goTo(`/collection/${cat.value}`)}
-                      className="block w-full text-left px-4 py-2 rounded-xl text-sm text-[#2C2C2C] hover:bg-white hover:text-[#C9A84C] transition-all"
+                      className="flex items-center gap-3 w-full text-left px-4 py-2 rounded-xl text-sm text-[#2C2C2C] hover:bg-white hover:text-[#C9A84C] transition-all"
                     >
-                      {cat.icon} {cat.label}
+                      <CollectionThumb collection={cat} size={30} />
+                      <span className="truncate">{cat.label}</span>
                     </button>
                   ))}
                   <button

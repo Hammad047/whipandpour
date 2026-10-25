@@ -5,6 +5,7 @@ import ProductCard from '@/components/ProductCard';
 import { trpc } from '@/lib/trpc';
 import { categoryLabel, formatPrice, getCollectionOptions } from '@/const';
 import { useActiveCollections } from '@/hooks/useCollections';
+import CollectionThumb from '@/components/CollectionThumb';
 import { useSEO } from '@/hooks/useSEO';
 
 type SortBy = 'newest' | 'price-asc' | 'price-desc' | 'rating' | 'name';
@@ -194,13 +195,14 @@ export default function Shop() {
             <button
               key={cat.value}
               onClick={() => selectCategory(cat.value)}
-              className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
+              className={`shrink-0 inline-flex items-center gap-2 pl-1.5 pr-4 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
                 category === cat.value
                   ? 'bg-[#2C2C2C] text-[#FAF7F2] border-[#2C2C2C]'
                   : 'bg-white text-[#2C2C2C] border-[#E8DDD0] hover:border-[#C9A84C]'
               }`}
             >
-              {cat.icon} {cat.short}
+              <CollectionThumb collection={cat} size={26} />
+              {cat.short ?? cat.label}
             </button>
           ))}
         </div>
