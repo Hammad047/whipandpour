@@ -17,9 +17,7 @@
  *
  * Tunables:
  *   KEEPALIVE_ENABLED=false            turn it off without unsetting the URL
- *   KEEPALIVE_INTERVAL_SECONDS=600     seconds between pings (default 600 —
- *                                      comfortably inside Render's ~15 minute
- *                                      idle timer without wasting requests)
+ *   KEEPALIVE_INTERVAL_SECONDS=300     seconds between pings (default 300)
  *   KEEPALIVE_VERBOSE=true             log every ping, not just status changes
  *
  * A LIMIT WORTH KNOWING: this cannot wake a service that is already asleep —
@@ -32,7 +30,10 @@
  * between healthy and unhealthy — because free tiers also ration log volume.
  */
 
-const DEFAULT_INTERVAL_SECONDS = 600;
+// Render's idle timer is 15 minutes. Pinging every 5 leaves room for a ping
+// to fail and the next one to still arrive in time — at 10 minutes a single
+// dropped ping opens a 20 minute gap and the service sleeps anyway.
+const DEFAULT_INTERVAL_SECONDS = 300;
 const MIN_INTERVAL_SECONDS = 10;
 const REQUEST_TIMEOUT_MS = 15_000;
 const HEALTH_PATH = "/api/health";
