@@ -53,6 +53,7 @@ const { contentHomepage, adminContentUpdateHomepage } = require("./routers/conte
 const { reviewsByProduct, reviewsCanReview, reviewsCreate } = require("./routers/reviews");
 const { stripeCreateCheckoutSession, stripeGetSession } = require("./routers/stripeRouter");
 const { mailStatus } = require("./mailer");
+const { startKeepAlive } = require("./keepalive");
 
 const app = express();
 app.use(express.json());
@@ -579,7 +580,15 @@ app.get("/api/auth/demo-logout", async (req, res) => {
 // ─── Health check ─────────────────────────────────────────────────────────────
 
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "whipandpour-node-backend" });
+  // uptimeSeconds is what makes this useful to an uptime monitor: a value that
+  // keeps climbing means the host never spun down, while one that resets to a
+  // few seconds means it did and the ping paid for a cold start.
+  res.json({
+    status: "ok",
+    service: "whipandpour-node-backend",
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // ─── SEO: sitemap + robots ─────────────────────────────────────────────────────
@@ -686,6 +695,9 @@ async function start() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[Startup] Listening on port ${PORT}`);
+    // Started only once the server is actually serving, so the first ping
+    // cannot race the listener. No-ops unless a public URL is configured.
+    startKeepAlive();
   });
 }
 
