@@ -54,6 +54,7 @@ const { reviewsByProduct, reviewsCanReview, reviewsCreate } = require("./routers
 const { stripeCreateCheckoutSession, stripeGetSession } = require("./routers/stripeRouter");
 const { mailStatus } = require("./mailer");
 const { startKeepAlive } = require("./keepalive");
+const { recordPageView, adminVisitors, startRetentionSweeper } = require("./routers/analytics");
 
 const app = express();
 app.use(express.json());
@@ -399,6 +400,7 @@ async function dispatchProcedure(procedure, inputData, isMutation, req, res) {
 
     // ── reporting ──
     if (procedure === "admin.analytics") return adminAnalytics();
+    if (procedure === "admin.visitors") return adminVisitors(inp || {});
     if (procedure === "admin.payments.list") return adminPaymentsList();
 
     // ── site content ──
@@ -408,6 +410,15 @@ async function dispatchProcedure(procedure, inputData, isMutation, req, res) {
     }
 
     throw new TRPCError(`Procedure not found: ${procedure}`, "NOT_FOUND");
+  }
+
+  // ── visitor analytics ──
+  if (procedure === "analytics.track") {
+    // Public and unauthenticated: it is called by every shopper's browser on
+    // every route change. Never throws — a missed count must not surface as
+    // an error on the storefront.
+    if (!isMutation) throw new TRPCError("analytics.track must be a mutation", "METHOD_NOT_SUPPORTED");
+    return recordPageView(req, inp || {});
   }
 
   // ── site content ──
@@ -698,6 +709,9 @@ async function start() {
     // Started only once the server is actually serving, so the first ping
     // cannot race the listener. No-ops unless a public URL is configured.
     startKeepAlive();
+    // pageViews is the one table that grows with traffic, so old rows are
+    // dropped on a schedule rather than kept forever.
+    startRetentionSweeper();
   });
 }
 

@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart2,
   Tag, Star, Warehouse, CreditCard, Menu, X, ChevronLeft,
-  LogOut, Flame, ArrowLeft, Image as ImageIcon, Layers
+  LogOut, Flame, ArrowLeft, Image as ImageIcon, Layers, Eye
 } from 'lucide-react';
 import { useAdmin } from '@/contexts/AdminContext';
 
@@ -20,6 +20,7 @@ const navItems = [
   { label: 'Orders',      href: '/admin/orders',      icon: ShoppingCart },
   { label: 'Customers',   href: '/admin/customers',   icon: Users },
   { label: 'Analytics',   href: '/admin/analytics',   icon: BarChart2 },
+  { label: 'Visitors',    href: '/admin/visitors',    icon: Eye },
   { label: 'Promo Codes', href: '/admin/promos',      icon: Tag },
   { label: 'Reviews',     href: '/admin/reviews',     icon: Star },
   { label: 'Inventory',   href: '/admin/inventory',   icon: Warehouse },

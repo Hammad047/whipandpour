@@ -37,10 +37,14 @@ import AdminPayments from "./pages/AdminPayments";
 import { useCollections } from "./hooks/useCollections";
 import Collection from "./pages/Collection";
 import AdminCollections from "./pages/AdminCollections";
+import AdminVisitors from "./pages/AdminVisitors";
+import { usePageTracking } from "./hooks/usePageTracking";
 
 function Router() {
   const [location] = useLocation();
   useCollections();
+  // Counts one storefront page view per route change; skips /admin itself.
+  usePageTracking();
   const isAdminPage = location.startsWith('/admin');
 
   return (
@@ -71,6 +75,7 @@ function Router() {
         <Route path="/admin/orders" component={AdminOrders} />
         <Route path="/admin/customers" component={AdminCustomers} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
+        <Route path="/admin/visitors" component={AdminVisitors} />
         <Route path="/admin/promos" component={AdminPromos} />
         <Route path="/admin/reviews" component={AdminReviews} />
         <Route path="/admin/inventory" component={AdminInventory} />

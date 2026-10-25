@@ -239,6 +239,39 @@ const UploadedImage = sequelize.define("UploadedImage", {
   createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
 }, { tableName: "uploadedImages", timestamps: false });
 
+// One row per page view, written by the frontend on every route change.
+//
+// Deliberately stores no raw IP address. `visitorId` is an HMAC of the IP and
+// user agent under a server-held salt, which tells two visitors apart and
+// recognises a returning one without the table ever holding something that
+// identifies a person if the database leaks. The same reasoning applies to
+// `referrerHost`: the host is the useful part, while a full referrer URL can
+// carry query strings from the other site.
+const PageView = sequelize.define("PageView", {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  visitorId: { type: DataTypes.STRING(64), allowNull: false },
+  path: { type: DataTypes.STRING(500), allowNull: false },
+  referrerHost: { type: DataTypes.STRING(255), allowNull: true },
+  // ISO 3166-1 alpha-2, from Cloudflare's CF-IPCountry header.
+  country: { type: DataTypes.STRING(2), allowNull: true },
+  // Null on Cloudflare's free plan, which does not send CF-IPCity.
+  city: { type: DataTypes.STRING(100), allowNull: true },
+  device: { type: DataTypes.STRING(10), allowNull: false, defaultValue: "unknown" },
+  browser: { type: DataTypes.STRING(40), allowNull: true },
+  os: { type: DataTypes.STRING(40), allowNull: true },
+  createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+}, {
+  tableName: "pageViews",
+  timestamps: false,
+  // This is the one table that grows with traffic rather than with orders, so
+  // every admin query is served off an index.
+  indexes: [
+    { fields: ["createdAt"] },
+    { fields: ["visitorId"] },
+    { fields: ["path"] },
+  ],
+});
+
 const PromoCode = sequelize.define("PromoCode", {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   code: { type: DataTypes.STRING(50), allowNull: false, unique: true },
@@ -538,6 +571,6 @@ module.exports = {
   sequelize, Op,
   CATEGORIES,
   User, Product, Order, OrderItem, Cart, Wishlist, Review, PromoCode, SiteSetting,
-  Collection, AuthSession, UploadedImage,
+  Collection, AuthSession, UploadedImage, PageView,
   initDb, sizeOptionsFor,
 };
