@@ -151,7 +151,7 @@ class TRPCError extends Error {
 }
 
 module.exports = {
-  COOKIE_NAME, UNAUTHED_ERR_MSG, NOT_ADMIN_ERR_MSG,
+  COOKIE_NAME, UNAUTHED_ERR_MSG, NOT_ADMIN_ERR_MSG, crossSiteCookie,
   hashPassword, verifyPassword,
   createSession, destroySession, getSessionIdFromRequest, getUserIdFromRequest,
   getCurrentUser, requireUser, requireAdmin,

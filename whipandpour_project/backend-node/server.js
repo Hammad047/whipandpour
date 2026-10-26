@@ -418,7 +418,7 @@ async function dispatchProcedure(procedure, inputData, isMutation, req, res) {
     // every route change. Never throws — a missed count must not surface as
     // an error on the storefront.
     if (!isMutation) throw new TRPCError("analytics.track must be a mutation", "METHOD_NOT_SUPPORTED");
-    return recordPageView(req, inp || {});
+    return recordPageView(req, res, inp || {});
   }
 
   // ── site content ──

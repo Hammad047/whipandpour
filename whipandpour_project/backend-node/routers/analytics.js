@@ -26,10 +26,18 @@
  */
 
 const crypto = require("crypto");
+const cookie = require("cookie");
 const { PageView, SiteSetting, Op } = require("../db");
+const { crossSiteCookie } = require("../auth");
 const { fn, col, literal } = require("sequelize");
 
 const SALT_SETTING_KEY = "analytics.salt";
+const VISITOR_COOKIE = "wp_vid";
+const VISITOR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // one year
+// Shape of a cookie-issued id: the "c_" prefix distinguishes it from the
+// 32-hex HMAC ids issued before cookies existed, and from each other in the
+// admin table, so it is visible which rows carry a reliable identity.
+const VISITOR_COOKIE_PATTERN = /^c_[A-Za-z0-9_-]{22}$/;
 const DEFAULT_RETENTION_DAYS = 90;
 const VISIT_GAP_MINUTES = 30;
 const MAX_PATH_LENGTH = 500;
@@ -83,6 +91,53 @@ async function visitorIdFor(req) {
   const salt = await getSalt();
   const material = `${clientIp(req)}|${req.headers["user-agent"] || ""}`;
   return crypto.createHmac("sha256", salt).update(material).digest("hex").slice(0, 32);
+}
+
+/**
+ * The visitor's id, preferring a cookie this server issued.
+ *
+ * WHY A COOKIE BEATS THE HMAC
+ * The HMAC is derived from IP and user agent, so it gets two things wrong that
+ * matter badly on mobile networks: a visitor whose carrier IP rotates turns
+ * into a second visitor, and two people behind one carrier NAT using the same
+ * browser collapse into one. Carrier-grade NAT is the norm on Pakistani mobile
+ * networks, which is most of this store's traffic. A random id issued once and
+ * returned by the browser has neither problem.
+ *
+ * The cookie is same-site rather than third-party: the API and the storefront
+ * share the registrable domain whipandpour.com, so SameSite=Lax is sent and
+ * no third-party cookie blocking applies. It is also server-set, which keeps
+ * it clear of Safari's 7-day cap on script-written storage.
+ *
+ * The id is used on the very request that issues the cookie, not from the next
+ * one onwards. Deferring it would split a new visitor's first visit across two
+ * ids and break the page-path trail, which is the thing the visit log is for.
+ *
+ * LIMITS, PLAINLY
+ * A cookie identifies a browser, not a person: the same shopper on a phone and
+ * a laptop is two visitors, and cleared cookies or a private window start
+ * over. A client that refuses cookies gets a fresh id per page view and
+ * inflates the visitor count — uncommon for a same-site cookie, but real.
+ */
+async function resolveVisitorId(req, res) {
+  const existing = cookie.parse(req.headers.cookie || "")[VISITOR_COOKIE];
+  if (existing && VISITOR_COOKIE_PATTERN.test(existing)) return existing;
+
+  // Defensive: without a response to write to there is nowhere to put the
+  // cookie, so fall back to the derived id rather than minting one that can
+  // never come back.
+  if (!res || res.headersSent) return visitorIdFor(req);
+
+  const id = `c_${crypto.randomBytes(16).toString("base64url")}`;
+  const crossSite = crossSiteCookie();
+  res.append("Set-Cookie", cookie.serialize(VISITOR_COOKIE, id, {
+    httpOnly: true,
+    sameSite: crossSite ? "none" : "lax",
+    secure: crossSite, // SameSite=None is rejected by browsers without Secure.
+    maxAge: VISITOR_COOKIE_MAX_AGE,
+    path: "/",
+  }));
+  return id;
 }
 
 // ─── User-agent parsing ──────────────────────────────────────────────────────
@@ -211,7 +266,7 @@ if (typeof rateLimitSweeper.unref === "function") rateLimitSweeper.unref();
  * `{ recorded: false }` rather than throwing, because a failure to count a
  * visit must never surface as an error in a shopper's browser.
  */
-async function recordPageView(req, input) {
+async function recordPageView(req, res, input) {
   try {
     const userAgent = req.headers["user-agent"] || "";
     if (isBot(userAgent)) return { recorded: false, reason: "bot" };
@@ -222,7 +277,7 @@ async function recordPageView(req, input) {
       return { recorded: false, reason: "admin" };
     }
 
-    const visitorId = await visitorIdFor(req);
+    const visitorId = await resolveVisitorId(req, res);
     if (rateLimited(visitorId, path)) return { recorded: false, reason: "throttled" };
 
     await PageView.create({
