@@ -55,6 +55,7 @@ const { stripeCreateCheckoutSession, stripeGetSession } = require("./routers/str
 const { mailStatus } = require("./mailer");
 const { startKeepAlive } = require("./keepalive");
 const { recordPageView, adminVisitors, startRetentionSweeper } = require("./routers/analytics");
+const { registerDiag } = require("./diag");
 
 const app = express();
 app.use(express.json());
@@ -631,6 +632,9 @@ app.get("/api/ready", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Inert unless DIAG_TOKEN is set in the environment.
+registerDiag(app);
 
 // ─── SEO: sitemap + robots ─────────────────────────────────────────────────────
 // Registered before the SPA catch-all below, and as plain routes rather than
