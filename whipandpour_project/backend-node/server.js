@@ -590,6 +590,18 @@ app.get("/api/auth/demo-logout", async (req, res) => {
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 
+// Database connection state, surfaced by /api/health. Declared here rather
+// than beside start() so the handler below reads it without relying on
+// hoisting.
+let dbState = "connecting"; // "connecting" | "ready" | "error"
+let dbErrorCode = null;
+
+/**
+ * Liveness. Always 200 while the process is serving, even with the database
+ * down — the point is to stay answerable so an outage is readable from
+ * outside. Deliberately never 503: a platform health check pointed here must
+ * not start killing a process whose only problem is an unreachable database.
+ */
 app.get("/api/health", (req, res) => {
   // uptimeSeconds is what makes this useful to an uptime monitor: a value that
   // keeps climbing means the host never spun down, while one that resets to a
@@ -598,6 +610,24 @@ app.get("/api/health", (req, res) => {
     status: "ok",
     service: "whipandpour-node-backend",
     uptimeSeconds: Math.round(process.uptime()),
+    database: dbState,
+    // The code only (ECONNREFUSED, ER_ACCESS_DENIED_ERROR…). This endpoint is
+    // public and the driver's full message embeds the database user and host.
+    ...(dbErrorCode ? { databaseError: dbErrorCode } : {}),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * Readiness: 200 only when the app can actually serve data, 503 otherwise.
+ * This is the one to point an uptime monitor at.
+ */
+app.get("/api/ready", (req, res) => {
+  const ready = dbState === "ready";
+  res.status(ready ? 200 : 503).json({
+    ready,
+    database: dbState,
+    ...(dbErrorCode ? { databaseError: dbErrorCode } : {}),
     timestamp: new Date().toISOString(),
   });
 });
@@ -686,11 +716,45 @@ if (fs.existsSync(frontendDist) && fs.statSync(frontendDist).isDirectory()) {
 
 const PORT = Number(process.env.PORT || 8000);
 
-async function start() {
-  console.log("[Startup] Initializing database…");
-  await initDb();
-  console.log("[Startup] Database ready.");
+const DB_RETRY_BASE_MS = 2_000;
+const DB_RETRY_MAX_MS = 60_000;
 
+let retentionStarted = false;
+
+/**
+ * Connects the database, retrying with exponential backoff until it succeeds.
+ * Retrying rather than exiting means a database that comes back brings the
+ * site back with it, without a redeploy.
+ */
+async function connectDatabase() {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      console.log(`[Startup] Initializing database… (attempt ${attempt})`);
+      await initDb();
+      dbState = "ready";
+      dbErrorCode = null;
+      console.log("[Startup] Database ready.");
+      // pageViews is the one table that grows with traffic, so old rows are
+      // dropped on a schedule rather than kept forever. Guarded because a
+      // reconnect must not stack a second sweeper.
+      if (!retentionStarted) {
+        retentionStarted = true;
+        startRetentionSweeper();
+      }
+      return;
+    } catch (err) {
+      dbState = "error";
+      dbErrorCode = err.original?.code || err.parent?.code || err.name || "UNKNOWN";
+      const delay = Math.min(DB_RETRY_BASE_MS * 2 ** (attempt - 1), DB_RETRY_MAX_MS);
+      console.error(`[Startup] Database init failed (attempt ${attempt}): ${err.message}`);
+      console.error(`[Startup] Retrying in ${Math.round(delay / 1000)}s. API is serving; data routes will fail until this succeeds.`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
+async function start() {
+  // Routes first, so the listener never serves a half-built app.
   app.use(
     "/api/admin/upload",
     async (req, res, next) => {
@@ -709,10 +773,14 @@ async function start() {
     // Started only once the server is actually serving, so the first ping
     // cannot race the listener. No-ops unless a public URL is configured.
     startKeepAlive();
-    // pageViews is the one table that grows with traffic, so old rows are
-    // dropped on a schedule rather than kept forever.
-    startRetentionSweeper();
   });
+
+  // Connected only after the listener is up, and retried instead of fatal.
+  // Previously this ran before listen() and exited on failure, so an
+  // unreachable database meant the port was never bound at all — from outside,
+  // byte-for-byte identical to a dead host. Not awaited: start() returns once
+  // the server is serving.
+  connectDatabase();
 }
 
 start().catch((err) => {
