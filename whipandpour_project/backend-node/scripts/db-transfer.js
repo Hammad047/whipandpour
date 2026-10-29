@@ -20,6 +20,15 @@
  * required to load because the load empties every table first.
  */
 
+// Loads .env the same way server.js does, so this reads exactly the
+// configuration the app would use — and so no password has to be typed on a
+// command line or left in shell history.
+try {
+  require("dotenv").config();
+} catch {
+  // dotenv is optional here; environment variables still work on their own.
+}
+
 const fs = require("fs");
 const path = require("path");
 const db = require("../db");
