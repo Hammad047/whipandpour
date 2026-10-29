@@ -29,13 +29,13 @@ cd whipandpour_project/backend-node
 
 # 1. Dump the live MySQL. Produces readable JSON, so it doubles as a backup.
 DB_HOST=srv1042.hstgr.io DB_NAME=<name> DB_USER=<user> DB_PASSWORD=<password> \
-  node scripts/db-transfer.js dump ./wp-dump.json
+  node scripts/db-transfer.js dump ~/wp-dump.json
 
 # 2. Load it into the new Postgres, using the EXTERNAL connection string.
 #    --force is required: the load empties every table first, because
 #    creating the schema also seeds demo products.
 DATABASE_URL='postgres://…external…' DB_SSL=true \
-  node scripts/db-transfer.js load ./wp-dump.json --force
+  node scripts/db-transfer.js load ~/wp-dump.json --force
 ```
 
 The load prints a row count per table and fails loudly if any count differs
@@ -52,7 +52,10 @@ should return 200.
 
 ## Afterwards
 
-- Keep `wp-dump.json` somewhere safe; it is a full copy of the store's data.
+- Keep `~/wp-dump.json` somewhere safe and **never inside this repository** — it is a
+  full copy of the store's data, including every customer's name, address and
+  email, and this repository is public. `.gitignore` covers the filename as a
+  second line of defence.
 - Delete `DIAG_TOKEN` and remove `diag.js` — it exists only for the outage.
 - Hostinger's MySQL can stay as a cold backup for a while; nothing points at it.
 
