@@ -746,7 +746,12 @@ async function connectDatabase() {
       dbState = "error";
       dbErrorCode = err.original?.code || err.parent?.code || err.name || "UNKNOWN";
       const delay = Math.min(DB_RETRY_BASE_MS * 2 ** (attempt - 1), DB_RETRY_MAX_MS);
-      console.error(`[Startup] Database init failed (attempt ${attempt}): ${err.message}`);
+      // AggregateError from a dual-stack connect carries an empty message, so
+      // the code is printed first — without it this line said nothing at all.
+      console.error(
+        `[Startup] Database init failed (attempt ${attempt}): ${dbErrorCode}` +
+          (err.message ? ` — ${err.message}` : "")
+      );
       console.error(`[Startup] Retrying in ${Math.round(delay / 1000)}s. API is serving; data routes will fail until this succeeds.`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
