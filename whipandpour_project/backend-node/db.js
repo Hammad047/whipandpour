@@ -14,7 +14,24 @@ const path = require("path");
 const { Sequelize, DataTypes, Op } = require("sequelize");
 
 function buildSequelize() {
-  const { DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, DB_PORT } = process.env;
+  const { DATABASE_URL, DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, DB_PORT } = process.env;
+
+  // Postgres, by connection string. Render supplies one, and its *internal*
+  // form keeps the traffic on the private network — there is no egress IP to
+  // allowlist, which is the whole reason for preferring it to a database
+  // reached across the public internet.
+  if (DATABASE_URL) {
+    // Required for Render's external connection string but not the internal
+    // one, so it is opt-in: an SSL handshake against a plain listener fails.
+    const ssl = /^(1|true|yes)$/i.test((process.env.DB_SSL || "").trim());
+    return new Sequelize(DATABASE_URL, {
+      dialect: "postgres",
+      logging: false,
+      define: { timestamps: false, freezeTableName: true },
+      pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },
+      dialectOptions: ssl ? { ssl: { require: true, rejectUnauthorized: false } } : {},
+    });
+  }
 
   if (DB_HOST && DB_NAME && DB_USER) {
     return new Sequelize(DB_NAME, DB_USER, DB_PASSWORD || "", {
@@ -42,6 +59,29 @@ function buildSequelize() {
 }
 
 const sequelize = buildSequelize();
+const dialect = sequelize.getDialect();
+
+/**
+ * Case-insensitive LIKE. MySQL's default collation ignores case, and SQLite's
+ * LIKE does too for ASCII — but Postgres's does not, so a plain Op.like would
+ * silently make product search case-sensitive there.
+ */
+const likeOp = dialect === "postgres" ? Op.iLike : Op.like;
+
+/**
+ * The calendar-day part of a timestamp column. MySQL and SQLite have DATE();
+ * Postgres has no such function and needs a cast instead.
+ */
+function dayExpr(column) {
+  return dialect === "postgres"
+    ? Sequelize.literal(`CAST("${column}" AS DATE)`)
+    : Sequelize.fn("DATE", Sequelize.col(column));
+}
+
+/** The same expression as raw SQL, for HAVING, which takes no builders. */
+function dayExprSql(column) {
+  return dialect === "postgres" ? `CAST("${column}" AS DATE)` : `DATE(\`${column}\`)`;
+}
 
 // ─── Product categories ─────────────────────────────────────────────────────
 // Machine value (stored in the DB) → human label (rendered in the UI).
@@ -568,7 +608,7 @@ async function initDb() {
 }
 
 module.exports = {
-  sequelize, Op,
+  sequelize, Op, dialect, likeOp, dayExpr, dayExprSql,
   CATEGORIES,
   User, Product, Order, OrderItem, Cart, Wishlist, Review, PromoCode, SiteSetting,
   Collection, AuthSession, UploadedImage, PageView,

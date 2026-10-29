@@ -27,7 +27,7 @@
 
 const crypto = require("crypto");
 const cookie = require("cookie");
-const { PageView, SiteSetting, Op } = require("../db");
+const { PageView, SiteSetting, Op, dayExpr, dayExprSql } = require("../db");
 const { crossSiteCookie } = require("../auth");
 const { fn, col, literal } = require("sequelize");
 
@@ -342,9 +342,9 @@ function startOfDaysAgo(days) {
   return d;
 }
 
-// DATE() exists in both MySQL and SQLite, so one expression serves either
-// dialect and the aggregation stays in the database.
-const DAY_EXPR = fn("DATE", col("createdAt"));
+// Spelled per dialect by the helper, since Postgres has no DATE() function.
+// Either way the aggregation stays in the database.
+const DAY_EXPR = dayExpr("createdAt");
 const COUNT_VIEWS = [fn("COUNT", col("id")), "views"];
 const COUNT_VISITORS = [fn("COUNT", fn("DISTINCT", col("visitorId"))), "visitors"];
 
@@ -529,7 +529,7 @@ async function adminVisitors(input) {
     where: windowWhere,
     attributes: ["visitorId", [fn("COUNT", fn("DISTINCT", DAY_EXPR)), "daysSeen"]],
     group: ["visitorId"],
-    having: literal("COUNT(DISTINCT DATE(createdAt)) > 1"),
+    having: literal(`COUNT(DISTINCT ${dayExprSql("createdAt")}) > 1`),
     raw: true,
   });
 

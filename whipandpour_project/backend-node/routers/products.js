@@ -5,7 +5,7 @@
  */
 
 const { Op } = require("sequelize");
-const { Product, Collection } = require("../db");
+const { Product, Collection, likeOp } = require("../db");
 const { money } = require("../money");
 
 function serializeProduct(p) {
@@ -45,10 +45,10 @@ async function productsList(opts = {}) {
   if (search) {
     const term = `%${search.trim()}%`;
     where[Op.or] = [
-      { name: { [Op.like]: term } },
-      { description: { [Op.like]: term } },
-      { category: { [Op.like]: term } },
-      { scentNotes: { [Op.like]: term } },
+      { name: { [likeOp]: term } },
+      { description: { [likeOp]: term } },
+      { category: { [likeOp]: term } },
+      { scentNotes: { [likeOp]: term } },
     ];
   }
   if (minPrice != null) where.price = { ...(where.price || {}), [Op.gte]: minPrice };
