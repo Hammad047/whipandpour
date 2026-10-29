@@ -1,0 +1,88 @@
+name: Keep backend awake
+
+# Render's free tier hibernates a service after 15 minutes without inbound
+# traffic, and a hibernating service cannot wake itself. The in-process pinger
+# (whipandpour_project/backend-node/keepalive.js) lives inside the very process
+# that hibernation stops, so once the API went down on 2026-10-29 it sat in
+# `x-render-routing: hibernate-pending-wake` with nothing left to wake it.
+#
+# This pings from outside, so it survives the backend being down, and it fails
+# loudly — a failed run emails the repo owner, which is the alerting that was
+# missing when the store served no products for hours.
+
+on:
+  schedule:
+    # Every 10 minutes from 01:00 to 16:59 UTC — 06:00 to 21:59 PKT (UTC+5),
+    # i.e. store hours. Deliberately not 24/7: round-the-clock uptime burns
+    # ~744 of the 750 free instance-hours in a 31-day month, leaving no margin
+    # for anything else in the workspace. This window costs ~496.
+    # Offset off the hour because :00 is Actions' most congested minute.
+    - cron: '3-59/10 1-16 * * *'
+  workflow_dispatch:
+
+# A slow cold start must not let runs stack on top of each other.
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Ping the health endpoint
+        env:
+          HEALTH_URL: ${{ vars.HEALTH_URL || 'https://api.whipandpour.com/api/health' }}
+        run: |
+          set -uo pipefail
+
+          # Waking a hibernating instance takes about a minute; a wake that is
+          # failing returns 503 with `retry-after: 5`. Retry for roughly three
+          # minutes before calling it an outage.
+          attempts=18
+          delay=10
+          last_state='no-response'
+
+          for i in $(seq 1 "$attempts"); do
+            # `Accept: text/html` is load-bearing. Render answers a non-HTML
+            # request to a hibernating service by holding the socket open and
+            # sending nothing at all, which is indistinguishable from a dead
+            # host; with it, Render returns a prompt 503 instead.
+            response=$(curl -sS --max-time 20 \
+              -H 'Accept: text/html,application/json;q=0.9' \
+              -H 'User-Agent: whipandpour-keepalive (+github-actions)' \
+              -w '\n%{http_code}' "$HEALTH_URL" 2>/dev/null) || response=''
+
+            code=$(printf '%s' "$response" | tail -n1)
+            body=$(printf '%s' "$response" | sed '$d')
+            echo "attempt $i/$attempts: HTTP ${code:-no-response}"
+
+            if [ "$code" = '200' ]; then
+              database=$(printf '%s' "$body" | jq -r '.database // "unknown"' 2>/dev/null || echo 'parse-error')
+              uptime=$(printf '%s' "$body" | jq -r '.uptimeSeconds // "?"' 2>/dev/null || echo '?')
+              last_state="$database"
+              echo "  database=$database uptimeSeconds=$uptime"
+
+              # uptimeSeconds climbing across runs means it never hibernated;
+              # a value near zero means this ping paid for a cold start.
+              if [ "$database" = 'ready' ]; then
+                echo "awake and healthy"
+                exit 0
+              fi
+              # "connecting" is normal during a cold start, so keep waiting.
+            fi
+
+            if [ "$i" -lt "$attempts" ]; then
+              sleep "$delay"
+            fi
+          done
+
+          if [ "$last_state" = 'no-response' ]; then
+            echo "::error::No response from $HEALTH_URL after $attempts attempts. Check Render -> Events and Logs."
+          else
+            echo "::error::API is serving but the database stayed '$last_state'. The storefront renders with no products in this state."
+          fi
+          exit 1
