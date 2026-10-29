@@ -22,6 +22,25 @@ to rotate.
   - **internal** — for the app. Private network, no SSL needed.
   - **external** — for running this migration from a laptop. Needs `DB_SSL=true`.
 
+## Checking a connection at any point
+
+`scripts/db-check.js` verifies whichever database the environment points at,
+layer by layer, and says where the failure is: DNS, a dropped packet, a refused
+port, authentication, the query, or a missing schema. It is read-only — the
+write test uses a TEMPORARY table that never outlives the connection. Exit code
+0 means healthy, so it is safe to use in a pre-deploy check.
+
+```bash
+# prompts for the password instead of leaving it in shell history
+read -rsp "DB password: " DB_PASSWORD; echo
+DB_HOST=srv1042.hstgr.io DB_PORT=3306 \
+DB_NAME=<name> DB_USER=<user> DB_PASSWORD="$DB_PASSWORD" \
+  node scripts/db-check.js
+
+# or against the new Postgres
+DATABASE_URL='postgres://…' DB_SSL=true node scripts/db-check.js
+```
+
 ## Steps
 
 ```bash
